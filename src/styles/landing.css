@@ -1709,7 +1709,7 @@
   z-index: 4;
   pointer-events: none;
   opacity: 0;
-  background: radial-gradient(80% 60% at 50% 30%, rgba(8, 12, 24, 0.1), rgba(3, 4, 8, 0.85));
+  background: radial-gradient(85% 65% at 50% 25%, rgba(8, 12, 24, 0.02), rgba(3, 4, 8, 0.42));
   transition: opacity 1.2s var(--ease);
 }
 
