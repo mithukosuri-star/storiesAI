@@ -1659,11 +1659,17 @@ window.CStars = (function () {
         return [cX + Math.cos(a7) * r7, cY + Math.sin(a7) * r7 * .72];
       case 8: /* warm gold rain */
         return [p.bx + Math.sin(t * .0004 + p.a) * 18, (p.by + t * .018 * (1 + p.seed)) % H];
-      default: /* sparse starfield */
-        return [p.bx + Math.sin(t * .00018 + p.a) * 9, p.by + Math.cos(t * .00015 + p.a) * 7];
+      default: /* sparse starfield — slow but clearly alive */
+        return [p.bx + Math.sin(t * .00034 + p.a) * 34 + Math.sin(t * .00011 + p.a * 2) * 14,
+                p.by + Math.cos(t * .00028 + p.a) * 26];
     }
   }
   function frame(ts) {
+    raf = requestAnimationFrame(frame);
+    try { draw(ts); } catch (e) { /* one bad frame must not stop the sky */ }
+  }
+
+  function draw(ts) {
     var dt = Math.min(50, ts - last); last = ts; t += dt;
     cx.clearRect(0, 0, W, H);
     cx.globalCompositeOperation = 'lighter';
@@ -1672,7 +1678,8 @@ window.CStars = (function () {
       var p = P[i], q = target(p, i, n);
       p.px = p.x; p.py = p.y;
       p.x += (q[0] - p.x) * .045; p.y += (q[1] - p.y) * .045;
-      var alpha = (awake ? .5 : .62) * (.22 + .78 * Math.abs(Math.sin(t * .0007 + p.tw)));
+      var alpha = (awake ? .55 : .68) * (.22 + .78 * Math.abs(Math.sin(t * .0009 + p.tw)));
+      if (p.bright) alpha = Math.min(1, alpha * 1.25);
       if (mode === 4 && p.bright) {
         cx.strokeStyle = 'rgba(' + p.c.join(',') + ',' + (alpha * .5) + ')';
         cx.lineWidth = .7; cx.beginPath(); cx.moveTo(p.px, p.py); cx.lineTo(p.x, p.y); cx.stroke();
@@ -1701,7 +1708,6 @@ window.CStars = (function () {
       cx.beginPath(); cx.arc(p.x, p.y, rr, 0, 6.283); cx.fill();
     }
     cx.globalCompositeOperation = 'source-over';
-    raf = requestAnimationFrame(frame);
   }
   function init() {
     if (inited) return;
@@ -1727,7 +1733,8 @@ window.CStars = (function () {
     init: init,
     setMode: function (m) { mode = parseInt(m, 10) || 0; },
     setAwake: function (a) { awake = !!a; },
-    mode: function () { return mode; }
+    mode: function () { return mode; },
+    info: function () { return { running: !!raf, count: P.length, mode: mode }; }
   };
 })();
 
@@ -1746,6 +1753,7 @@ window.CWorld = (function () {
   var progs = {}, bufs = {}, sky = null, quad = null;
   var moodTint = [0.55, 0.45, 0.95], flash = 0, nextFlash = 6;
   var LOW = false;   /* lighter particle budget on phones / weak GPUs */
+  var reason = '', rendererName = '', lastNow = 0, fps = 0, ftSum = 0, ftN = 0, quality = 0, slowStreak = 0;
 
   /* ---------------------------------------------------------------- math */
   function persp(out, fovy, aspect, near, far) {
@@ -2148,9 +2156,23 @@ window.CWorld = (function () {
   }
 
   /* ------------------------------------------------------------ lifecycle */
+  /* Hand the sky over to the animated 2D canvas. Reached when the GPU says no
+     (no context, lost context, a render that throws) or when the device simply
+     cannot hold the flight — a moving sky is always better than a stuck one. */
+  function handOver(why) {
+    if (dead) return;
+    dead = true; paused = true;
+    reason = why || reason || 'fallback';
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    document.body.classList.remove('has-world');
+    try { if (window.CStars) window.CStars.init(); } catch (e) {}
+    try { document.dispatchEvent(new CustomEvent('cworld:fallback', { detail: { reason: reason } })); } catch (e) {}
+  }
+
   function resize() {
     if (!gl || dead) return;
     dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.15 : 1.6);
+    if (quality > 0) dpr = Math.max(0.7, dpr * 0.68);
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
@@ -2170,9 +2192,38 @@ window.CWorld = (function () {
 
   function render() {
     if (!gl || paused || dead) return;
+    /* a throw inside a rAF callback would kill the loop for good and leave the
+       sky frozen — catch it and fall back instead */
+    try { frame(); } catch (e) { handOver('render error'); return; }
+    if (!dead && !paused) raf = requestAnimationFrame(render);
+  }
+
+  function frame() {
     var now = performance.now();
     time = (now - t0) / 1000;
     prog += (progT - prog) * 0.075;
+
+    /* adaptive quality: a phone that cannot hold the flight gets a smaller
+       render target first, and then the cheaper 2D sky */
+    if (lastNow) {
+      var dtf = now - lastNow;
+      if (dtf > 0 && dtf < 500) { ftSum += dtf; ftN++; }
+      if (ftN >= 45) {
+        fps = Math.round(1000 / (ftSum / ftN));
+        ftSum = 0; ftN = 0;
+        if (time > 2.5) {
+          if (fps < 24) {
+            slowStreak++;
+            if (slowStreak >= 2) {
+              slowStreak = 0;
+              if (quality === 0) { quality = 1; resize(); }
+              else { handOver('slow gpu ' + fps + 'fps'); return; }
+            }
+          } else slowStreak = 0;
+        }
+      }
+    }
+    lastNow = now;
 
     /* an occasional far-away lightning, like the reference sky */
     if (time > nextFlash) { flash = 1; nextFlash = time + rnd(7, 18); }
@@ -2229,8 +2280,6 @@ window.CWorld = (function () {
       bindAttr(world, 'aSeed', c.seed, 1);
       gl.drawArrays(gl.POINTS, 0, c.count);
     });
-
-    raf = requestAnimationFrame(render);
   }
 
   function bindAttr(prog, name, buf, size) {
@@ -2260,13 +2309,26 @@ window.CWorld = (function () {
   function init(canvas) {
     cv = canvas || document.getElementById('world');
     if (!cv) return false;
-    var opts = { antialias: false, alpha: false, premultipliedAlpha: false, powerPreference: 'high-performance' };
-    gl = cv.getContext('webgl', opts) || cv.getContext('experimental-webgl', opts);
-    if (!gl) return false;
+    /* Some Android builds refuse the 'high-performance' hint or fail the very
+       first attempt: try progressively more conservative options before giving
+       up on WebGL. A refused context used to leave phones with a black sky. */
+    if (cv.addEventListener) cv.addEventListener('webglcontextcreationerror', function (e) {
+      reason = (e && e.statusMessage) || 'context creation failed';
+    }, false);
+    var attempts = [
+      { antialias: false, alpha: false, premultipliedAlpha: false, powerPreference: 'high-performance' },
+      { antialias: false, alpha: false },
+      { antialias: false, alpha: false, failIfMajorPerformanceCaveat: false }
+    ];
+    for (var ci = 0; ci < attempts.length && !gl; ci++) {
+      try { gl = cv.getContext('webgl', attempts[ci]) || cv.getContext('experimental-webgl', attempts[ci]); } catch (e) { gl = null; }
+    }
+    if (!gl) { reason = reason || 'no webgl'; return false; }
+    try { rendererName = String(gl.getParameter(gl.RENDERER) || ''); } catch (e) {}
 
     sky = program(SKY_V, SKY_F, ['aP']);
     world = program(VERT, FRAG, ['aPos', 'aCol', 'aSize', 'aSeed']);
-    if (!sky || !world) return false;
+    if (!sky || !world) { reason = 'shader compile failed'; return false; }
 
     quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -2296,10 +2358,7 @@ window.CWorld = (function () {
        phone" report. Fall back to the animated 2D sky instead. */
     cv.addEventListener('webglcontextlost', function (e) {
       e.preventDefault();
-      dead = true; paused = true;
-      if (raf) { cancelAnimationFrame(raf); raf = null; }
-      document.body.classList.remove('has-world');
-      try { if (window.CStars) window.CStars.init(); } catch (err) {}
+      handOver('webgl context lost');
     }, false);
     window.addEventListener('pageshow', function (e) {
       if (!e.persisted || dead) return;
@@ -2314,6 +2373,14 @@ window.CWorld = (function () {
     return true;
   }
 
+  function info() {
+    return {
+      up: !!ok && !dead, dead: dead, reason: reason,
+      fps: fps, quality: quality, points: Math.round(S.length / 3),
+      dpr: Math.round(dpr * 100) / 100, renderer: rendererName
+    };
+  }
+
   return {
     init: init,
     supported: function () { return ok; },
@@ -2324,7 +2391,9 @@ window.CWorld = (function () {
       else if (m === 'relaxing') moodTint = [0.45, 0.85, 0.78];
       else moodTint = [0.62, 0.5, 0.95];
     },
-    count: function () { return S.length; }
+    count: function () { return S.length; },
+    stop: function (why) { handOver(why || 'stopped'); },
+    info: info
   };
 })();
 
@@ -2458,7 +2527,7 @@ window.CCursor = (function () {
       cookie: null,
       awake: false,
       settings: {
-        sound: false, music: true, language: 'en', fontSize: 20,
+        sound: false, music: true, language: 'en', fontSize: 20, sky: 'auto',
         ai: { enabled: false, endpoint: '', key: '', model: 'gpt-4o-mini' }
       },
       wizard: { type: 'single', names: '', age: '5-6', value: 'kindness', setting: 'forest', length: 'medium', mood: 'gentle', language: 'en', villain: false, extras: '', chapterNumber: 1, seriesId: null }
@@ -3204,6 +3273,32 @@ window.CCursor = (function () {
     }, 2600);
   }
 
+  /* ---------------- diagnostics: add ?debug=1 to the URL ----------------
+     A tiny readout of what the GPU is actually doing, so a phone screenshot
+     says everything: is WebGL up, at what frame rate, and is the 2D sky running. */
+  function initDebug() {
+    if (!/[?&]debug/.test(location.search)) return;
+    var el = document.createElement('div');
+    el.id = 'dbg';
+    el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:200;max-width:calc(100% - 16px);font:10px/1.55 ui-monospace,Menlo,monospace;color:#fff6dc;background:rgba(4,2,12,.88);border:1px solid rgba(243,211,138,.35);padding:8px 10px;border-radius:8px;white-space:pre-wrap;word-break:break-word;pointer-events:none';
+    document.body.appendChild(el);
+    var mq = function (q) { try { return window.matchMedia(q).matches ? 'yes' : 'no'; } catch (e) { return '?'; } };
+    var build = function () {
+      var w = (window.CWorld && window.CWorld.info) ? window.CWorld.info() : { up: false, reason: 'no world' };
+      var st = (window.CStars && window.CStars.info) ? window.CStars.info() : { running: false, count: 0 };
+      return [
+        'sky: ' + (w.up ? 'webgl flying' : 'webgl OFF — ' + (w.reason || '?')),
+        'fps ' + (w.fps || '–') + ' · dpr ' + (w.dpr || '–') + ' · points ' + (w.points || 0) + ' · quality ' + (w.quality || 0),
+        '2d sky: ' + (st.running ? 'running · ' + st.count + ' stars · mode ' + st.mode : 'off'),
+        'reduced-motion ' + mq('(prefers-reduced-motion: reduce)') + ' · motion override ' + (document.documentElement.classList.contains('force-motion') ? 'yes' : 'no'),
+        'view ' + window.innerWidth + '×' + window.innerHeight + ' · scroll ' + Math.round(window.scrollY || 0),
+        w.renderer ? String(w.renderer).slice(0, 46) : ''
+      ].filter(Boolean).join('\n');
+    };
+    var tick = function () { el.textContent = build(); setTimeout(tick, 700); };
+    tick();
+  }
+
   function initOverlays() {
     $('#signInBtn').onclick = function () {
       modal('<h3>Your library, right here</h3><p class="small muted">storiesAI has no accounts and no passwords. Your stories live on this device, so there is nothing to sign in to — just open your library whenever you like.</p><div class="actions"><a class="pill-gold" href="#/library" data-close>OPEN MY LIBRARY</a><button class="btn-outline" data-close>MAYBE LATER</button></div>',
@@ -3215,11 +3310,29 @@ window.CCursor = (function () {
     $('#installFooter').onclick = installModal;
     $('#installBtn').onclick = function () { if (deferredInstall) { deferredInstall.prompt(); } else { installModal(); } };
     $('#menuBtn').onclick = function () {
-      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>📚 My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="10">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
+      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>📚 My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="10">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
         function (m, close) {
           $$('[data-close]', m).forEach(function (a) { a.onclick = function () { close(); }; });
           /* the AWAKE / ASLEEP rail is a phone-friendly line only, so the night
              mode toggle lives here too */
+          var sk = $('[data-sky]', m);
+          if (sk) {
+            sk.textContent = S.settings.sky === 'stars' ? 'Sky: 2D stars' : 'Sky: flying world';
+            sk.onclick = function () {
+              var toStars = S.settings.sky !== 'stars';
+              S.settings.sky = toStars ? 'stars' : 'auto';
+              save();
+              if (toStars) {
+                /* live switch: the 2D sky is already built, just stop flying */
+                if (window.CWorld && window.CWorld.stop) window.CWorld.stop('chosen 2D sky');
+                else if (window.CStars) window.CStars.init();
+                close();
+                toast('2D stars — lighter on the battery');
+              } else {
+                location.reload();   /* bringing the flying world back needs a fresh context */
+              }
+            };
+          }
           var mt = $('[data-motion]', m);
           if (mt) {
             var paintMotion = function () { mt.textContent = motionForced() ? 'Motion: full ✦' : 'Motion: follow phone'; };
@@ -3349,7 +3462,11 @@ window.CCursor = (function () {
   /* ---------------- boot ---------------- */
   function boot() {
     var worldUp = false;
-    try { if (window.CWorld) worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
+    /* Sky: 'auto' flies the WebGL world (falling back to the 2D canvas sky),
+       'stars' keeps the lighter 2D sky — a per-device escape hatch from ☰ */
+    if (S.settings.sky !== 'stars' && window.CWorld) {
+      try { worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
+    }
     if (worldUp) {
       document.body.classList.add('has-world');
       var total = Math.max(1, (document.getElementById('scenes') || document.body).scrollHeight - window.innerHeight);
@@ -3357,7 +3474,7 @@ window.CCursor = (function () {
     } else { window.CStars.init(); }
     renderHome(); window.__sceneUpdate = initScenes();
     if (window.CCursor) window.CCursor.init();
-    initMotion(); initWizard(); initLibrary(); initOverlays(); initSound(); initRouting(); initPWA();
+    initMotion(); initWizard(); initLibrary(); initOverlays(); initSound(); initRouting(); initPWA(); initDebug();
     syncStars();
     if (S.settings.music && !A.isMusicOn()) { /* music starts on first sound gesture or when a story opens */ }
   }

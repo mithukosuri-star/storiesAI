@@ -169,6 +169,21 @@ frame rate instead of dropping the show:
   for just that device.
 - `vh` fallbacks for every `svh`, safe-area padding for notches, and the chapter rail is kept as a
   slim progress line (it used to be hidden below 1000 px).
+- **The flying world defends itself**: it retries context creation with conservative options, catches
+  a renderer that throws (instead of dying silently inside a rAF loop), and if the device holds
+  under ~24 fps it drops its render resolution once and then hands over to the 2D sky.
+
+### If the sky on a phone is still a still picture
+
+1. **Is the new build deployed?** Open ☰ — if there is no *Motion:* row, the host is serving an older
+   `index.html`. Merging a commit does not redeploy Netlify by itself (Netlify → *Deploys* →
+   *Trigger deploy*, or re-drop the folder). Installed apps may also need one close/reopen for the
+   `storiesai-shell-v4` service worker to take over.
+2. **`?debug=1`** on the URL adds a small readout of what the GPU is really doing: WebGL up or not
+   (and why), frame rate, point budget, quality step, whether the 2D sky is running, the reduced
+   motion flag and the viewport. A screenshot of that box identifies the cause immediately.
+3. **☰ → Sky: 2D stars** swaps the WebGL flight for the much cheaper animated canvas sky on that
+   device (choose *flying world* to go back; that one reloads).
 
 ---
 
