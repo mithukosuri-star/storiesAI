@@ -149,6 +149,29 @@ node tests/world-check.js   # WebGL world boots + screenshots along the flight
 
 ---
 
+## Motion on phones
+
+The scroll choreography is tuned separately for touch devices, so the phone build animates at
+frame rate instead of dropping the show:
+
+- **No blur filters on touch.** The scene fades use opacity + a short lift; the desktop-only
+  `blur()`/`scale()` parallax is what iOS silently drops (and it is the most expensive thing on
+  the page). `will-change` is only applied to scenes that are actually near the viewport.
+- **One rAF ticker** drives the scenes, the rail dot and the particle flight, so the fades follow
+  a finger on every mobile browser — not only when `scroll` events happen to arrive.
+- **The night sky is a fixed layer**, not a `background-attachment: fixed` on `<body>` (ignored by
+  iOS Safari, a full repaint per frame on Android).
+- **WebGL context loss is handled**: when a phone drops the GL context (backgrounded tab, memory
+  pressure) the app falls back to the animated 2D sky instead of freezing on a black canvas.
+- **`prefers-reduced-motion` is respected but no longer freezes the page.** Fades stay, movement
+  and blur are removed. If the phone is set to reduce motion (accessibility setting, *remove
+  animations*, or battery saver) the app offers **☰ → Motion: full** to bring the full show back,
+  for just that device.
+- `vh` fallbacks for every `svh`, safe-area padding for notches, and the chapter rail is kept as a
+  slim progress line (it used to be hidden below 1000 px).
+
+---
+
 ## Honest limitations
 
 - **Front-end only.** No server, email sign-in, payment or real invite system; Stars are free (no prices are shown anywhere), and the community
