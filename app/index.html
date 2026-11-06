@@ -3,83 +3,388 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1026" />
+    <meta name="theme-color" content="#060a1a" />
     <title>FiabaMia · a bedtime fairy tale</title>
     <meta
       name="description"
       content="Personalized bedtime stories for children. A fairy tale never read before, written tonight for the one you love."
     />
-    <link rel="preconnect" href="https://www.fiabamia.com" />
-    <link rel="preload" as="image" href="/poster.svg" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23e8c47a'/%3E%3C/svg%3E" />
   </head>
-  <body>
-    <!-- Scroll-locked stage that holds the original experience, unmodified. -->
-    <div id="stage" class="stage">
-      <!-- Poster shown until the framed site paints, so entry feels seamless. -->
-      <div class="veil" id="veil" aria-hidden="true">
-        <div class="veil-sky"></div>
-        <div class="veil-content">
-          <p class="veil-brand">FiabaMia</p>
-          <p class="veil-line">No one has ever told it<em>…</em></p>
-          <div class="veil-stars"><i></i><i></i><i></i></div>
-        </div>
-      </div>
+  <body class="is-loading">
+    <!-- WebGL night sky, fixed behind everything -->
+    <canvas id="sky" aria-hidden="true"></canvas>
+    <div class="grade" aria-hidden="true"></div>
 
-      <iframe
-        id="scene"
-        class="scene"
-        title="FiabaMia — personalized bedtime stories for children"
-        src="https://www.fiabamia.com/"
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope; xr-spatial-tracking"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen
-        loading="eager"
-      ></iframe>
-
-      <!-- Minimal controls. They live outside the iframe and never alter it. -->
-      <div class="hud" id="hud" data-collapsed="false">
-        <button class="hud-toggle" id="hudToggle" type="button" aria-expanded="true" aria-controls="hudPanel">
-          <span class="hud-dot" aria-hidden="true"></span>
-          <span class="hud-toggle-label">Scene</span>
+    <!-- Entry veil -->
+    <div class="veil" id="veil">
+      <div class="veil-inner">
+        <p class="veil-brand">FiabaMia</p>
+        <p class="veil-line">No one has ever told it<em>…</em></p>
+        <button class="enter" id="enterBtn" type="button">
+          <span class="enter-ring" aria-hidden="true"></span>
+          Listen with sound · Sound on
         </button>
-
-        <div class="hud-panel" id="hudPanel" role="toolbar" aria-label="Scene controls">
-          <button class="hud-btn" id="btnFullscreen" type="button" aria-pressed="false" title="Immersive mode">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4" />
-            </svg>
-            <span class="hud-label">Immersive</span>
-          </button>
-          <button class="hud-btn" id="btnReload" type="button" title="Restart the story from the beginning">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M3 12a9 9 0 1 0 3.2-6.9M3 4v4.5h4.5" />
-            </svg>
-            <span class="hud-label">Restart</span>
-          </button>
-          <a class="hud-btn" href="https://www.fiabamia.com/" target="_blank" rel="noopener noreferrer" title="Open FiabaMia in a new tab">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-            </svg>
-            <span class="hud-label">Open</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Shown only if the framed site refuses to load. -->
-      <div class="fallback" id="fallback" hidden>
-        <div class="fallback-card">
-          <p class="fallback-kicker">The scene is being shy tonight</p>
-          <h1>The fairy tale is one tap away</h1>
-          <p>
-            This browser is blocking embedded pages. Open the story in its own window and every
-            animation, sound and 3D moment will play exactly as it should.
-          </p>
-          <a class="fallback-cta" href="https://www.fiabamia.com/" target="_blank" rel="noopener noreferrer">
-            Open FiabaMia
-          </a>
-        </div>
+        <p class="veil-hint"><span>03</span> Scroll to enter</p>
       </div>
     </div>
+
+    <!-- Fixed chrome -->
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="FiabaMia home">
+        <span class="brand-moon" aria-hidden="true"></span>
+        <span class="brand-word">FiabaMia</span>
+      </a>
+      <nav class="topnav" aria-label="Sections">
+        <a href="#made">Made to measure</a>
+        <a href="#music">Music</a>
+        <a href="#words">Golden words</a>
+        <a href="#voices">Voice colors</a>
+        <a href="#stars">Stars</a>
+      </nav>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">
+        <span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="sound-label">Sound off</span>
+      </button>
+    </header>
+
+    <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
+
+    <main id="top">
+      <!-- 1 · HERO -->
+      <section class="hero" id="hero">
+        <div class="hero-inner">
+          <p class="kicker">_Prologue_</p>
+          <h1 class="hero-title">
+            <span class="line" data-delay="0">Personalized bedtime stories</span>
+            <span class="line italic" data-delay="1">for children</span>
+          </h1>
+          <p class="hero-sub">
+            A fairy tale never read before, written tonight for the one you love.
+          </p>
+          <p class="hero-note">Close your eyes… we're about to step into the fairy tale.</p>
+          <div class="hero-actions">
+            <a class="btn btn-gold" href="#made">Create your story for free</a>
+            <a class="btn btn-ghost" href="#music">Hear the music</a>
+          </div>
+          <div class="scroll-cue" aria-hidden="true"><span></span>scroll</div>
+        </div>
+      </section>
+
+      <!-- 2 · MADE TO MEASURE -->
+      <section class="block" id="made">
+        <div class="section-head">
+          <p class="kicker">A story made to measure</p>
+          <h2 class="display">Name, age, value, place<br /><em>and a little villain</em></h2>
+        </div>
+        <div class="cards five">
+          <article class="card rise">
+            <span class="card-glyph" aria-hidden="true">✦</span>
+            <h3>Their name.</h3>
+            <p>Your child becomes the hero of the story.</p>
+          </article>
+          <article class="card rise">
+            <span class="card-glyph" aria-hidden="true">◦</span>
+            <h3>Their age.</h3>
+            <p>To tailor language and complexity.</p>
+          </article>
+          <article class="card rise">
+            <span class="card-glyph" aria-hidden="true">❋</span>
+            <h3>A value.</h3>
+            <p>Courage, kindness, patience… whatever you want to teach.</p>
+          </article>
+          <article class="card rise">
+            <span class="card-glyph" aria-hidden="true">◈</span>
+            <h3>A place.</h3>
+            <p>Setting and emotional tone.</p>
+          </article>
+          <article class="card rise">
+            <span class="card-glyph" aria-hidden="true">✧</span>
+            <h3>And a little villain.</h3>
+            <p>If you like, one who turns good in the end.</p>
+          </article>
+        </div>
+        <p class="breath">One last breath… <em>and you're inside the story.</em></p>
+      </section>
+
+      <!-- 3 · MUSIC -->
+      <section class="block" id="music">
+        <div class="section-head">
+          <p class="kicker">Every story has its own music</p>
+          <h2 class="display">Tap a mood <em>and listen</em></h2>
+        </div>
+        <div class="moods">
+          <button class="mood rise" data-mood="gentle" type="button">
+            <span class="mood-name">Gentle</span>
+            <span class="mood-desc">Soft melody</span>
+            <span class="mood-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+          <button class="mood rise" data-mood="adventurous" type="button">
+            <span class="mood-name">Adventurous</span>
+            <span class="mood-desc">Epic rhythms</span>
+            <span class="mood-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+          <button class="mood rise" data-mood="magical" type="button">
+            <span class="mood-name">Magical</span>
+            <span class="mood-desc">Fairy-tale sounds</span>
+            <span class="mood-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+          <button class="mood rise" data-mood="relaxing" type="button">
+            <span class="mood-name">Relaxing</span>
+            <span class="mood-desc">Hushed notes</span>
+            <span class="mood-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
+        </div>
+        <p class="hint" id="musicHint">Tap a mood to hear it — each one plays a real generated soundtrack.</p>
+      </section>
+
+      <!-- 4 · GOLDEN WORDS -->
+      <section class="block" id="words">
+        <div class="section-head">
+          <p class="kicker">Words that come to life</p>
+          <h2 class="display">Tap the golden words<br /><em>and listen</em></h2>
+        </div>
+        <div class="story-lines">
+          <p class="story-line">
+            Arianna heard
+            <button class="word" data-sound="wind" type="button">the wind rustling</button>
+            through the leaves, gently lifting them.
+          </p>
+          <p class="story-line">
+            Among the coral branches,
+            <button class="word" data-sound="bells" type="button">little golden bells</button>
+            were singing.
+          </p>
+          <p class="story-line">
+            Far away, beyond the hills,
+            <button class="word" data-sound="thunder" type="button">a thunderstorm</button>
+            was rumbling.
+          </p>
+        </div>
+      </section>
+
+      <!-- 5 · VOICE COLORS -->
+      <section class="block" id="voices">
+        <div class="section-head">
+          <p class="kicker">Become a storyteller</p>
+          <h2 class="display">No acting lessons <em>needed</em></h2>
+          <p class="lede">
+            Every chapter has a color that tells you which voice to read it in. Tap one and discover
+            the rhythm and mood to give your reading.
+          </p>
+        </div>
+        <div class="voices">
+          <button class="voice rise" data-voice="green" type="button">
+            <span class="voice-dot" aria-hidden="true"></span>
+            <span class="voice-name">Green</span>
+            <span class="voice-tags">calm · slow · gentle</span>
+          </button>
+          <button class="voice rise" data-voice="yellow" type="button">
+            <span class="voice-dot" aria-hidden="true"></span>
+            <span class="voice-name">Yellow</span>
+            <span class="voice-tags">cheerful · lively · smiling</span>
+          </button>
+          <button class="voice rise" data-voice="blue" type="button">
+            <span class="voice-dot" aria-hidden="true"></span>
+            <span class="voice-name">Blue</span>
+            <span class="voice-tags">clear · steady · guiding</span>
+          </button>
+          <button class="voice rise" data-voice="red" type="button">
+            <span class="voice-dot" aria-hidden="true"></span>
+            <span class="voice-name">Red</span>
+            <span class="voice-tags">quick · punchy · energetic</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 6 · AGES -->
+      <section class="block" id="ages">
+        <div class="section-head">
+          <p class="kicker">Every age has its own story</p>
+          <h2 class="display">From 0 to 10, <em>in five age groups</em></h2>
+          <p class="lede">Each one speaks its own language. Tap one.</p>
+        </div>
+        <div class="ages">
+          <button class="age rise" data-age="0-4" type="button">
+            <span class="age-range">0–4</span><span class="age-unit">years</span>
+            <span class="age-desc">rhythm · sounds · cuddles</span>
+          </button>
+          <button class="age rise" data-age="5-7" type="button">
+            <span class="age-range">5–7</span><span class="age-unit">years</span>
+            <span class="age-desc">silly magic · inventions</span>
+          </button>
+          <button class="age rise" data-age="8-10" type="button">
+            <span class="age-range">8–10</span><span class="age-unit">years</span>
+            <span class="age-desc">dilemmas · real metaphors</span>
+          </button>
+        </div>
+        <p class="counter">A community of parents — over <strong data-count="1759">0</strong> stories created</p>
+      </section>
+
+      <!-- 7 · TESTIMONIALS -->
+      <section class="block" id="parents">
+        <div class="section-head">
+          <p class="kicker">What parents say</p>
+          <h2 class="display">★★★★★</h2>
+        </div>
+      </section>
+      <div class="marquee" aria-label="Parent reviews">
+        <div class="marquee-track" id="marqueeTrack"></div>
+      </div>
+
+      <!-- 8 · STAR PACKS -->
+      <section class="block" id="stars">
+        <div class="section-head">
+          <p class="kicker">Star packs</p>
+          <h2 class="display">Every story costs <em>one Star</em></h2>
+          <p class="lede">And today, Stars are free. It's the perfect time to try FiabaMia.</p>
+        </div>
+        <div class="packs">
+          <article class="pack rise">
+            <h3>Pouch of Stars</h3>
+            <p class="pack-count"><strong>10</strong> Stars</p>
+            <p class="pack-price"><s>Future price 4,90 €</s><span>Free for now</span></p>
+            <p class="pack-desc">Ten bedtime stories: a handful of magical evenings to get started.</p>
+            <p class="pack-fine">Nothing to pay: right now, Stars are a gift</p>
+          </article>
+          <article class="pack rise featured">
+            <span class="pack-badge">Most popular</span>
+            <h3>Chest of Stars</h3>
+            <p class="pack-count"><strong>30</strong> Stars</p>
+            <p class="pack-price"><s>Future price 9,90 €</s><span>Free for now</span></p>
+            <p class="pack-desc">A month of stories, one every night: the bedtime ritual never stops.</p>
+            <p class="pack-fine">Nothing to pay: right now, Stars are a gift</p>
+          </article>
+          <article class="pack rise">
+            <h3>Sky of Stars</h3>
+            <p class="pack-count"><strong>100</strong> Stars</p>
+            <p class="pack-price"><s>Future price 19,90 €</s><span>Free for now</span></p>
+            <p class="pack-desc">A whole sky of stories: months of tales, for brothers and sisters too.</p>
+            <p class="pack-fine">Nothing to pay: right now, Stars are a gift</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- 9 · HOW IT WORKS -->
+      <section class="block" id="how">
+        <div class="section-head">
+          <p class="kicker">How it works</p>
+          <h2 class="display">How a FiabaMia story <em>is born</em></h2>
+          <p class="lede">
+            FiabaMia writes <strong>personalized bedtime stories</strong> for children aged 0 to 10:
+            original stories in Italian, ready in about 30 seconds, to read aloud together.
+          </p>
+        </div>
+        <div class="steps">
+          <article class="step rise">
+            <span class="step-num">01</span>
+            <h3>A story made to measure</h3>
+            <p>
+              Choose the hero's name (even more than one, for brothers and sisters), their age, the
+              value you want to pass on, the setting and the length: short, medium or long, from
+              about 3 to 7 minutes of reading.
+            </p>
+          </article>
+          <article class="step rise">
+            <span class="step-num">02</span>
+            <h3>Music and interactive sounds</h3>
+            <p>
+              Every story has background music chosen to match its mood. Some words turn golden: tap
+              them to hear the sound, and the music softens to make room for it.
+            </p>
+          </article>
+          <article class="step rise">
+            <span class="step-num">03</span>
+            <h3>Voice guidance</h3>
+            <p>
+              Each chapter has a color that suggests how to read it: green calm, yellow cheerful,
+              blue steady, red quick. Even someone who has never read aloud becomes a storyteller.
+            </p>
+          </article>
+          <article class="step rise">
+            <span class="step-num">04</span>
+            <h3>Let's talk about it</h3>
+            <p>
+              After reading, you'll find three questions to ask your child out loud, tied to the value
+              and the characters: a prompt to talk it over before turning off the light.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- 10 · FAQ -->
+      <section class="block" id="faq">
+        <div class="section-head">
+          <p class="kicker">Frequently asked questions</p>
+          <h2 class="display">Everything you <em>want to know</em></h2>
+        </div>
+        <div class="faq" id="faqList">
+          <details class="rise">
+            <summary>What is FiabaMia?<span aria-hidden="true">+</span></summary>
+            <p>
+              A web app that creates personalized bedtime stories for children aged 0 to 10: choose
+              the name, age, value, setting and mood, and in about 30 seconds you get an original
+              story to read together, with music, interactive sounds and voice guidance.
+            </p>
+          </details>
+          <details class="rise">
+            <summary>How much does FiabaMia cost?<span aria-hidden="true">+</span></summary>
+            <p>
+              When you sign up you get 3 free Stars, and each story uses 1 Star. You can earn more by
+              inviting other parents or, when available, with the Star packs.
+            </p>
+          </details>
+          <details class="rise">
+            <summary>What ages are the stories for?<span aria-hidden="true">+</span></summary>
+            <p>
+              From 0 to 10, in five age groups (0–2, 3–4, 5–6, 7–8, 9–10). It's not just the hero
+              that changes: language, sentence length, conflict and the depth of the moral all adapt.
+            </p>
+          </details>
+          <details class="rise">
+            <summary>Are the stories safe for children?<span aria-hidden="true">+</span></summary>
+            <p>
+              Yes. They're made for bedtime: no violence, nothing scary or inappropriate. Every story
+              passes on an educational value you choose, such as courage, kindness or patience.
+            </p>
+          </details>
+          <details class="rise">
+            <summary>What are interactive sounds and voice colors?<span aria-hidden="true">+</span></summary>
+            <p>
+              Some words are circled as if in pencil: when your child taps them, they hear the real
+              sound. Voice colors suggest to the parent how to shape tone and rhythm chapter by
+              chapter.
+            </p>
+          </details>
+          <details class="rise">
+            <summary>Do I need an account to create a story?<span aria-hidden="true">+</span></summary>
+            <p>
+              Yes, a free one: just your email, no password. You receive a sign-in link or code, and
+              your stories stay saved in your personal library.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <!-- 11 · CLOSER -->
+      <section class="closer" id="closer">
+        <p class="kicker">Happily ever after</p>
+        <h2 class="display">This very night,<br /><em>their first story awaits you</em></h2>
+        <p class="lede">
+          The bedtime ritual becomes shared magic. Ready in 30 seconds, remembered forever.
+        </p>
+        <a class="btn btn-gold" href="#top">Create your first story</a>
+        <p class="closer-fine">Free, nothing to pay · Invite a friend and get more Stars</p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="brand-moon small" aria-hidden="true"></span>
+      <p>FiabaMia · a bedtime fairy tale</p>
+      <p class="footer-fine">
+        An homage to fiabamia.com. Stories, wording and concept belong to FiabaMia.
+      </p>
+    </footer>
 
     <script type="module" src="/src/main.js"></script>
   </body>
