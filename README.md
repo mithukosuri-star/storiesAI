@@ -174,6 +174,29 @@ frame rate instead of dropping the show:
   under ~26 fps it drops its render resolution once and then hands over to the 2D sky (~1 s later,
   not after two slow windows).
 
+### The book of stars (prologue)
+
+The prologue set piece is the Fiabamia gesture: the night sky **gathers itself into an open
+book** in front of the camera, turns one page, then dissolves back into stars as you scroll on.
+
+- **How it is drawn.** Particles, not an image: a vertex shader (`BOOK_V`) morphs every point from a
+  hashed dust cloud into its place on a page. Each point carries `aSide, aUV, aCol, aSize, aSeed,
+  aTurn`; the page uses a hinge rotation `ang = uTurn·π·aTurn`, a `sin(u·π)` bow so paper reads as
+  paper, and a faint idle breath so it is never quite still.
+- **What is on the pages.** A sparse paper grain, rows of handwriting dots with ragged ends and a
+  first-line indent, an illuminated gold drop cap, the chapter rule, page numerals and the gold
+  spine — plus real letterforms sampled from a canvas (`bookType()`), which appear as particles
+  where a 2D context is available.
+- **Budget.** 1 496 points on phones, 3 004 on desktop (the whole scene stays around 40–90 k
+  points). The shader adds ~6 `sin` per vertex and no per-pixel work beyond the existing point
+  sprite.
+- **Timeline.** Gathers 0.35 → 2.05 s after boot; the page turn is driven by scroll
+  (`prog / 0.055`), so a page swings while the hero is still on screen; the book starts leaving at
+  6 % progress and is gone by ~9 %, back into the starfield. The hero copy arrives in order
+  (kicker → display line → drawn gold rule → listen pill) as the book assembles.
+- **Reduced motion** collapses all of it to a still frame, and the hero copy is not hidden if the
+  animation cannot run.
+
 ### Why the sky used to crawl on a phone
 
 The sky is a full-screen fragment shader and it was written for a desktop GPU:

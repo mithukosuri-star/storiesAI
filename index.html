@@ -178,6 +178,21 @@ body.app-view .sound-fixed{display:none}
 .hero-foot .scroll-label{color:var(--gold);letter-spacing:.2em;font-size:9.5px;opacity:.9}
 .hero-foot .scroll-to-enter{color:rgba(246,238,223,.46)}
 .hero-say{font-family:var(--ui);font-size:8.5px;letter-spacing:.42em;text-transform:uppercase;color:rgba(246,238,223,.32);margin:110px 0 -46px}
+/* the prologue copy arrives in order, like handwriting appearing on the page;
+   only opacity + translate are animated, so it stays cheap on a phone */
+.scene.hero .kicker,.scene.hero .script-huge,.scene.hero .listen{opacity:0;animation:heroFallback .7s ease 3s forwards}
+.hero-rule{display:block;width:min(240px,54%);height:1px;margin:-26px auto 46px;transform:scaleX(0);transform-origin:50% 50%;
+  background:linear-gradient(90deg,transparent,rgba(214,178,96,.9) 18%,rgba(246,228,178,1) 50%,rgba(214,178,96,.9) 82%,transparent);
+  box-shadow:0 0 14px rgba(214,178,96,.55)}
+.scene.hero.hero-in .kicker{animation:heroRise .85s cubic-bezier(.22,.68,.3,1) .02s both}
+.scene.hero.hero-in .script-huge{animation:heroRise 1.15s cubic-bezier(.22,.68,.3,1) .22s both}
+.scene.hero.hero-in .hero-rule{animation:heroDraw 1.0s cubic-bezier(.5,.05,.2,1) 1.05s both}
+.scene.hero.hero-in .listen{animation:heroRise .9s cubic-bezier(.22,.68,.3,1) 1.25s both}
+@keyframes heroRise{from{opacity:0;transform:translate3d(0,20px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes heroDraw{from{transform:scaleX(0);opacity:.25}to{transform:scaleX(1);opacity:1}}
+/* the copy is never left invisible: if the reveal never fires, it simply fades
+   in late (the .hero-in rules above win on specificity when they do fire) */
+@keyframes heroFallback{from{opacity:0}to{opacity:1}}
 .scene.hero{padding-bottom:150px}
 .scene.hero .scene-inner{position:relative;z-index:2}
 .statement .display{margin-bottom:18px}
@@ -508,6 +523,7 @@ body.is-offline .offline-badge{display:block}
       <div class="scene-inner">
         <p class="kicker">STORIESAI &nbsp;·&nbsp; A BEDTIME FAIRY TALE</p>
         <h1 class="script-huge">No one has ever told it…</h1>
+        <span class="hero-rule" aria-hidden="true"></span>
         <button class="pill-outline listen" id="heroSound"><span class="dots"><i></i><i></i><i></i><i></i></span><span id="heroSoundLabel">LISTEN WITH SOUND</span></button>
       </div>
     </section>
@@ -2017,6 +2033,125 @@ window.CWorld = (function () {
     groundCover();
   }
 
+  /* ------------------------------------------------------------------ book
+     The reference experience's signature moment: an open book made of dust that
+     gathers out of a cloud, turns a page as you scroll and dissolves back into
+     stars when you leave the prologue. All of the movement lives in the vertex
+     shader — the CPU only sends a frame (position, basis, scale) and two
+     weights, so a phone pays almost nothing for it. */
+  var book = null, bookP = null;
+
+  /* sample a string from a 2D canvas so the pages carry real letterforms */
+  function bookType(text, size, italic) {
+    var out = [];
+    try {
+      var c = document.createElement('canvas');
+      c.width = 288; c.height = 96;
+      var x = c.getContext('2d');
+      if (!x || !x.getImageData) return out;
+      x.clearRect(0, 0, c.width, c.height);
+      x.fillStyle = '#fff';
+      x.font = (italic ? 'italic ' : '') + size + 'px Georgia, "Times New Roman", serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(text, c.width / 2, c.height / 2);
+      var data = x.getImageData(0, 0, c.width, c.height).data;
+      for (var yy = 0; yy < c.height; yy += 2) {
+        for (var xx = 0; xx < c.width; xx += 2) {
+          if (data[(yy * c.width + xx) * 4 + 3] > 120) out.push(xx / c.width, yy / c.height);
+        }
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  function buildBook() {
+    var side = [], uv = [], col = [], sz = [], sd = [], tr = [];
+    function pt(s, u, v, c, size, turn) {
+      side.push(s); uv.push(u, v); col.push(c[0], c[1], c[2]);
+      sz.push(size); sd.push(Math.random()); tr.push(turn || 0);
+    }
+    var PAPER = [0.60, 0.58, 0.70], INK = [0.80, 0.76, 0.66];
+    var GOLD = [1.0, 0.84, 0.52], CREAM = [1.0, 0.95, 0.86];
+
+    /* paper: barely-there dust, so the writing reads instead of the noise */
+    var cols = LOW ? 13 : 19, rows = LOW ? 17 : 27;
+    for (var s1 = -1; s1 <= 1; s1 += 2) {
+      for (var i = 0; i < cols; i++) {
+        for (var j = 0; j < rows; j++) {
+          var u = (i + Math.random()) / cols;
+          var v = (j + Math.random()) / rows;
+          var edge = Math.min(u, 1 - u);
+          var dim = 0.10 + 0.30 * Math.min(1, edge * 5.0) * (0.6 + Math.random() * 0.8);
+          pt(s1, u, v, [PAPER[0] * dim, PAPER[1] * dim, PAPER[2] * dim], rnd(0.3, 0.55), s1 > 0 ? 1 : 0);
+        }
+      }
+    }
+
+    /* the handwriting: rows of dots, ragged endings, a first-line indent */
+    var lines = LOW ? 13 : 20;
+    for (var s2 = -1; s2 <= 1; s2 += 2) {
+      for (var l = 0; l < lines; l++) {
+        var v0 = 0.27 + (l / lines) * 0.55;
+        var start = 0.11 + (l === 0 ? 0.05 : 0) + rnd(0, 0.012);
+        var end = 0.88 - Math.random() * 0.2;
+        var n = LOW ? 26 : 38;
+        for (var k = 0; k < n; k++) {
+          var u2 = start + (end - start) * (k / n) + rnd(-0.006, 0.006);
+          var ink = 0.62 + Math.random() * 0.42;
+          pt(s2, u2, v0 + rnd(-0.007, 0.007), [INK[0] * ink, INK[1] * ink, INK[2] * ink], rnd(0.28, 0.52), s2 > 0 ? 1 : 0);
+        }
+      }
+    }
+
+    /* the illuminated drop cap: a ring with a tail, drawn in particles so it
+       reads on every device (sampled type below is the bonus) */
+    var capU = 0.20, capV = 0.245, capRu = 0.072, capRv = 0.082;
+    for (var a1 = 0; a1 < 96; a1++) {
+      var th = (a1 / 96) * Math.PI * 2;
+      pt(-1, capU + Math.cos(th) * capRu, capV + Math.sin(th) * capRv, GOLD, rnd(0.7, 1.15), 0);
+      if (a1 % 3 === 0) pt(-1, capU + Math.cos(th) * capRu * 0.8, capV + Math.sin(th) * capRv * 0.8, GOLD, rnd(0.35, 0.6), 0);
+    }
+    for (var tq = 0; tq < 26; tq++) {
+      var fq = tq / 26;
+      pt(-1, capU + 0.015 + fq * 0.082, capV + 0.045 + fq * 0.07, GOLD, rnd(0.6, 1.0), 0);
+    }
+    /* the chapter ornament: a gold rule with tapered ends */
+    for (var r2 = -16; r2 <= 16; r2++) {
+      var f2 = Math.abs(r2) / 16;
+      pt(1, 0.5 + r2 * 0.0105, 0.225, GOLD, 0.55 * (1 - f2 * 0.55), 1);
+      if (r2 % 4 === 0) pt(1, 0.5 + r2 * 0.0105, 0.232, [1.0, 0.9, 0.65], 0.45, 1);
+    }
+    /* real letterforms sampled from a canvas, when the browser gives us one */
+    var head = bookType('Capitolo primo', 17, false);
+    for (var hi = 0; hi < head.length; hi += 2) pt(1, 0.17 + head[hi] * 0.68, 0.145 + head[hi + 1] * 0.075, GOLD, rnd(0.5, 0.9), 1);
+    var n1 = bookType('12', 13, false), n2 = bookType('13', 13, false);
+    for (var q1 = 0; q1 < n1.length; q1 += 2) pt(-1, 0.46 + n1[q1] * 0.1, 0.9 + n1[q1 + 1] * 0.03, CREAM, 0.5, 0);
+    for (var q2 = 0; q2 < n2.length; q2 += 2) pt(1, 0.46 + n2[q2] * 0.1, 0.9 + n2[q2 + 1] * 0.03, CREAM, 0.5, 1);
+
+    /* rules under the headings and the bright seam of the spine */
+    for (var r = 0; r < 46; r++) {
+      pt(1, 0.22 + (r / 45) * 0.5, 0.225, GOLD, 0.42, 1);
+      pt(-1, 0.22 + (r / 45) * 0.5, 0.855, [0.55, 0.5, 0.42], 0.4, 0);
+    }
+    var seams = LOW ? 44 : 84;
+    for (var sp = 0; sp <= seams; sp++) {
+      pt(-1, 0.003, sp / seams, GOLD, rnd(0.35, 0.75), 0);
+      pt(1, 0.003, sp / seams, GOLD, rnd(0.35, 0.75), 1);
+    }
+
+    function buf(arr, n) {
+      var b = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+      return { b: b, size: n, count: arr.length / n };
+    }
+    return {
+      count: side.length,
+      side: buf(side, 1), uv: buf(uv, 2), col: buf(col, 3),
+      size: buf(sz, 1), seed: buf(sd, 1), turn: buf(tr, 1)
+    };
+  }
+
   /* ------------------------------------------------------------- shaders */
   var VERT = [
     'attribute vec3 aPos; attribute vec3 aCol; attribute float aSize; attribute float aSeed;',
@@ -2048,6 +2183,41 @@ window.CWorld = (function () {
     '  float a = (core*0.95+halo*0.55)*smoothstep(0.5,0.38,d)*vA;',
     '  if(a < 0.004) discard;',
     '  gl_FragColor = vec4(mix(vCol, vec3(1.0), core*0.22), a);',
+    '}'
+  ].join('\n');
+
+  /* the book: parametric pages, a hinged page turn, edge dust, assemble morph */
+  var BOOK_V = [
+    'attribute float aSide; attribute vec2 aUV; attribute vec3 aCol; attribute float aSize; attribute float aSeed; attribute float aTurn;',
+    'uniform mat4 uProj; uniform mat4 uView;',
+    'uniform vec3 uBookPos; uniform vec3 uBookRight; uniform vec3 uBookUp; uniform vec3 uBookZ;',
+    'uniform float uBookScale; uniform float uTime; uniform float uPixel; uniform float uAlpha; uniform float uSizeMax;',
+    'uniform float uAssemble; uniform float uTurn;',
+    'varying vec3 vCol; varying float vA;',
+    'void main(){',
+    '  float u = aUV.x, v = aUV.y;',
+    '  vec3 p = vec3(aSide * u * 1.12, (0.5 - v) * 1.15, 0.0);',
+    '  float ang = uTurn * 3.14159 * aTurn;',
+    '  float ca = cos(ang), sa = sin(ang);',
+    '  p = vec3(p.x * ca - p.z * sa, p.y, p.x * sa + p.z * ca);',
+    '  float bow = sin(u * 3.14159);',
+    '  p.z += bow * 0.055 + sin(ang) * u * 0.20 * aTurn;',
+    '  p.z += sin(uTime * 0.7 + v * 2.0 + aSide) * 0.012;',
+    '  p.y += sin(uTime * 0.5 + aSide * 0.6 + u * 1.4) * 0.010;',
+    '  float dust = aTurn * sin(ang) * smoothstep(0.45, 1.0, u);',
+    '  p += vec3(sin(aSeed*41.0 + uTime*2.1), cos(aSeed*27.0 + uTime*1.6), sin(aSeed*19.0 + uTime*2.7)) * dust * 0.10;',
+    '  float t = clamp((uAssemble - aSeed * 0.42) / 0.58, 0.0, 1.0);',
+    '  t = t * t * (3.0 - 2.0 * t);',
+    '  vec3 cloud = vec3((fract(aSeed*91.7)-0.5)*6.0, (fract(aSeed*47.3)-0.5)*3.4, (fract(aSeed*13.9)-0.5)*3.2);',
+    '  p = mix(cloud, p, t);',
+    '  vec3 world = uBookPos + (uBookRight * p.x + uBookUp * p.y + uBookZ * p.z) * uBookScale;',
+    '  vec4 mv = uView * vec4(world, 1.0);',
+    '  gl_Position = uProj * mv;',
+    '  float d = max(0.5, -mv.z);',
+    '  float tw = 0.62 + 0.38 * sin(uTime * (0.8 + aSeed * 2.4) + aSeed * 39.0);',
+    '  vCol = mix(aCol, vec3(1.0, 0.86, 0.52), dust * 0.85);',
+    '  vA = uAlpha * tw * (0.55 + 0.45 * t) * (1.0 - dust * 0.3 * aSeed);',
+    '  gl_PointSize = clamp(aSize * uPixel * uBookScale * 2.6 * (7.5 / d), 0.9, uSizeMax * uPixel);',
     '}'
   ].join('\n');
 
@@ -2137,7 +2307,9 @@ window.CWorld = (function () {
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.warn('link', gl.getProgramInfoLog(p)); return null; }
     var o = { p: p, u: {}, a: {} };
-    ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha', 'uSizeMax'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
+    ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha', 'uSizeMax',
+      'uBookPos', 'uBookRight', 'uBookUp', 'uBookZ', 'uBookScale', 'uAssemble', 'uTurn'
+    ].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uRes2'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     attribs.forEach(function (n) { o.a[n] = gl.getAttribLocation(p, n); });
     return o;
@@ -2304,6 +2476,46 @@ window.CWorld = (function () {
       bindAttr(world, 'aSeed', c.seed, 1);
       gl.drawArrays(gl.POINTS, 0, c.count);
     });
+
+    /* ---- the prologue book: gathers on entry, turns a page with the scroll,
+       dissolves into dust once you leave the first screen ---- */
+    if (bookP && book && book.count) {
+      var appear = Math.min(1, Math.max(0, (time - 0.35) / 1.7));
+      appear = appear * appear * (3 - 2 * appear);
+      var leave = Math.max(0, Math.min(1, (prog - 0.058) / 0.035));
+      var fade = appear * (1 - Math.max(0, (leave - 0.7) / 0.3));
+      if (fade > 0.004) {
+        var bDist = LOW ? 7.4 : 7.8, bDrop = LOW ? 2.20 : 1.90, bScale = LOW ? 1.15 : 2.60;
+        var bp = [cam.eye[0] + fwd[0] * bDist - up[0] * bDrop,
+                  cam.eye[1] + fwd[1] * bDist - up[1] * bDrop,
+                  cam.eye[2] + fwd[2] * bDist - up[2] * bDrop];
+        var bz0 = [-fwd[0], -fwd[1], -fwd[2]];
+        var bu = norm([up[0] + bz0[0] * 0.34, up[1] + bz0[1] * 0.34, up[2] + bz0[2] * 0.34]);
+        var br = norm(cross(bu, bz0));
+        var bz = norm(cross(br, bu));
+        gl.useProgram(bookP.p);
+        gl.uniformMatrix4fv(bookP.u.uProj, false, proj);
+        gl.uniformMatrix4fv(bookP.u.uView, false, view);
+        gl.uniform1f(bookP.u.uTime, time);
+        gl.uniform1f(bookP.u.uPixel, dpr);
+        gl.uniform1f(bookP.u.uSizeMax, LOW ? 6.0 : 8.0);
+        gl.uniform1f(bookP.u.uAlpha, 0.82 * fade);
+        gl.uniform3fv(bookP.u.uBookPos, bp);
+        gl.uniform3fv(bookP.u.uBookRight, br);
+        gl.uniform3fv(bookP.u.uBookUp, bu);
+        gl.uniform3fv(bookP.u.uBookZ, bz);
+        gl.uniform1f(bookP.u.uBookScale, bScale);
+        gl.uniform1f(bookP.u.uAssemble, appear * (1 - leave));
+        gl.uniform1f(bookP.u.uTurn, Math.max(0, Math.min(1, prog / 0.055)));
+        bindAttr(bookP, 'aSide', book.side, 1);
+        bindAttr(bookP, 'aUV', book.uv, 2);
+        bindAttr(bookP, 'aCol', book.col, 3);
+        bindAttr(bookP, 'aSize', book.size, 1);
+        bindAttr(bookP, 'aSeed', book.seed, 1);
+        bindAttr(bookP, 'aTurn', book.turn, 1);
+        gl.drawArrays(gl.POINTS, 0, book.count);
+      }
+    }
   }
 
   function bindAttr(prog, name, buf, size) {
@@ -2367,6 +2579,8 @@ window.CWorld = (function () {
 
     buildWorld();
     chunks = splitChunks();
+    bookP = program(BOOK_V, FRAG, ['aSide', 'aUV', 'aCol', 'aSize', 'aSeed', 'aTurn']);
+    try { book = bookP ? buildBook() : null; } catch (e) { book = null; }
 
     resize();
     window.addEventListener('resize', resize);
@@ -2404,6 +2618,7 @@ window.CWorld = (function () {
     return {
       up: !!ok && !dead, dead: dead, reason: reason,
       fps: fps, quality: quality, points: Math.round(S.length / 3), low: LOW, cap: LOW ? 30 : 60,
+      book: book ? book.count : 0,
       dpr: Math.round(dpr * 100) / 100, renderer: rendererName
     };
   }
@@ -2420,6 +2635,7 @@ window.CWorld = (function () {
     },
     count: function () { return S.length; },
     stop: function (why) { handOver(why || 'stopped'); },
+    turn: function () { return Math.max(0, Math.min(1, prog / 0.055)); },
     info: info
   };
 })();
@@ -3322,6 +3538,7 @@ window.CCursor = (function () {
         'sky: ' + (w.up ? 'webgl flying' : 'webgl OFF — ' + (w.reason || '?')),
         'fps ' + (w.fps || '–') + ' · dpr ' + (w.dpr || '–') + ' · points ' + (w.points || 0) + ' · quality ' + (w.quality || 0),
         'shader ' + (w.low ? 'phone (2 octaves)' : 'full (5 octaves)') + ' · cap ' + (w.cap || 60) + 'fps',
+        'book ' + (w.book || 0) + ' points · turn ' + (window.CWorld && window.CWorld.turn ? window.CWorld.turn().toFixed(2) : '–'),
         '2d sky: ' + (st.running ? 'running · ' + st.count + ' stars · mode ' + st.mode : 'off'),
         'reduced-motion ' + mq('(prefers-reduced-motion: reduce)') + ' · motion override ' + (document.documentElement.classList.contains('force-motion') ? 'yes' : 'no'),
         'view ' + window.innerWidth + '×' + window.innerHeight + ' · scroll ' + Math.round(window.scrollY || 0),
@@ -3515,6 +3732,11 @@ window.CCursor = (function () {
     /* building 20k+ particles is real work on a slow phone: let the hero paint
        first, then raise the sky one frame later */
     setTimeout(startSky, 90);
+    /* the sky rises, the book gathers, then the words arrive */
+    setTimeout(function () {
+      var h = $('.scene.hero');
+      if (h) h.classList.add('hero-in');
+    }, 420);
     if (S.settings.music && !A.isMusicOn()) { /* music starts on first sound gesture or when a story opens */ }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
