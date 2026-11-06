@@ -2020,7 +2020,7 @@ window.CWorld = (function () {
   /* ------------------------------------------------------------- shaders */
   var VERT = [
     'attribute vec3 aPos; attribute vec3 aCol; attribute float aSize; attribute float aSeed;',
-    'uniform mat4 uProj; uniform mat4 uView; uniform float uTime; uniform float uPixel; uniform float uAlpha;',
+    'uniform mat4 uProj; uniform mat4 uView; uniform float uTime; uniform float uPixel; uniform float uAlpha; uniform float uSizeMax;',
     'varying vec3 vCol; varying float vA;',
     'void main(){',
     '  vec3 p = aPos;',
@@ -2031,7 +2031,7 @@ window.CWorld = (function () {
     '  float d = -mv.z;',
     '  gl_Position = uProj * mv;',
     '  float tw = 0.62 + 0.38*sin(uTime*(0.7+aSeed*2.3)+aSeed*40.0);',
-    '  gl_PointSize = clamp(aSize * uPixel * tw * (105.0/max(d,0.45)), 0.9, 13.0*uPixel);',
+    '  gl_PointSize = clamp(aSize * uPixel * tw * (105.0/max(d,0.45)), 0.9, uSizeMax*uPixel);',
     '  vCol = aCol;',
     '  vA = uAlpha * smoothstep(0.6,4.0,d) * (1.0 - smoothstep(190.0,320.0,d)) * (0.55+0.45*tw);',
     '}'
@@ -2053,60 +2053,74 @@ window.CWorld = (function () {
 
   /* full-screen sky: gradient, aurora veils, milky way, hill silhouettes */
   var SKY_V = 'attribute vec2 aP; varying vec2 vP; void main(){ vP = aP; gl_Position = vec4(aP,0.999,1.0); }';
-  var SKY_F = [
-    'precision highp float;',
-    'varying vec2 vP;',
-    'uniform vec2 uRes; uniform float uTime; uniform vec3 uFwd,uRight,uUp; uniform float uTanHalf,uAspect;',
-    'uniform vec3 uTop,uBot,uHor,uAcc,uMoon; uniform float uFlash; uniform vec2 uRes2;',
-    'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }',
-    'float noise(vec2 p){ vec2 i=floor(p),f=fract(p); vec2 u=f*f*(3.0-2.0*f);',
-    '  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }',
-    'float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }',
-    'float fbm3(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }',
-    'void main(){',
-    '  vec2 ndc = vP;',
-    '  vec3 dir = normalize(uFwd + uRight*(ndc.x*uTanHalf*uAspect) + uUp*(ndc.y*uTanHalf));',
-    '  float h = dir.y;',
-    '  vec3 col = mix(uBot, uTop, smoothstep(-0.05,0.62,h));',
-    '  col += uHor * exp(-abs(h-0.01)*13.0) * 0.34;',
-    '  float ang = atan(dir.z, dir.x);',
-    '  float n = fbm(vec2(ang*2.4 + uTime*0.012, h*4.6 - uTime*0.02));',
-    '  float rays = 0.6 + 0.8*fbm3(vec2(ang*15.0 + uTime*0.03, h*1.5 + uTime*0.01));',
-    '  float veils = pow(n,3.0)*rays*smoothstep(0.06,0.3,h)*(1.0-smoothstep(0.32,0.78,h));',
-    '  col += mix(uHor,uAcc,0.55) * veils * 0.55;',
-    '  float via = exp(-pow(dot(dir, normalize(vec3(0.18,0.77,0.6)))/0.14, 2.0));',
-    '  via *= 0.5 + 0.9*fbm3(vec2(ang*3.0,h*6.0));',
-    '  col += mix(uAcc, vec3(0.92,0.9,1.0), 0.6) * via * smoothstep(0.08,0.4,h) * 0.10;',
-    '  vec2 sc = vec2(ang*38.0, h*70.0);',
-    '  float st = step(0.9975, hash(floor(sc)));',
-    '  float tw = 0.55+0.45*sin(uTime*2.0 + hash(floor(sc))*40.0);',
-    '  col += vec3(st*tw*0.85) * smoothstep(0.04,0.5,h);',
-    '  float hz = -0.02 + 0.035*sin(ang*3.1) + 0.022*sin(ang*7.3+1.2) + 0.014*sin(ang*13.7+2.4);',
-    '  float ground = 1.0 - smoothstep(hz-0.012, hz+0.012, h);',
-    '  vec3 g = vec3(0.020,0.017,0.052) + uHor*0.05;',
-    '  col = mix(col, g, ground);',
-    '  col += vec3(0.55,0.6,1.0) * uFlash * 0.35 * (1.0-ground);',
-    '  vec3 moonD = normalize(uMoon);',
-    '  float md = dot(dir, moonD);',
-    '  float disc = smoothstep(0.99978, 0.99988, md);',
-    '  float glowM = pow(max(0.0, md), 1600.0) * 0.35 + pow(max(0.0, md), 120.0) * 0.09;',
-    '  col += vec3(1.0,0.97,0.88) * (disc * 2.2 + glowM) * smoothstep(0.02,0.2,h);',
-    '  for (int i=0;i<3;i++){',
-    '    float fi = float(i);',
-    '    float t = fract(uTime*0.055 + fi*0.37);',
-    '    vec2 a = vec2(-1.35 + fi*1.1, 1.15 - fi*0.45);',
-    '    vec2 b = vec2(a.x + 0.42, a.y - 0.30);',
-    '    vec2 p = mix(a, b, t);',
-    '    vec2 pa = ndc - p, ba = b - a;',
-    '    float hh = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);',
-    '    float dline = length(pa - ba*hh);',
-    '    float streak = smoothstep(0.004, 0.0, dline) * smoothstep(1.0, 0.55, hh) * (1.0 - smoothstep(0.0,0.35,abs(hh-1.0)));',
-    '    col += vec3(0.95,0.92,1.0) * streak * 0.85 * (0.35 + 0.65*sin(t*3.14159));',
-    '  }',
-    '  col += (hash(gl_FragCoord.xy)-0.5)*(1.0/255.0);',
-    '  gl_FragColor = vec4(col,1.0);',
-    '}'
-  ].join('\n');
+  /* The sky is a full-screen fragment shader, and about eight noise look-ups
+     per pixel is nothing for a laptop GPU and far too much for a phone one —
+     it was the reason the phone crawled while the laptop sailed. `low` builds a
+     phone variant: 2 octaves instead of 5, no second fbm pass, two shooting
+     stars. It also fixes the moon: `pow(md, 1600.0)` overflows to Inf on GPUs
+     whose "highp" is really medium (most Adreno/Mali parts), which is what
+     painted that huge white blob over the hero. */
+  function skyFragment(low) {
+    var OCT = low ? 2 : 5;             /* aurora octaves */
+    var RAYS = low ? 'fbm' : 'fbm3';   /* ray-detail pass */
+    var STARS = low ? 2 : 3;           /* shooting stars */
+    var o = [];
+    var add = function (l) { o.push(l); };
+    add('precision highp float;');
+    add('varying vec2 vP;');
+    add('uniform vec2 uRes; uniform float uTime; uniform vec3 uFwd,uRight,uUp; uniform float uTanHalf,uAspect;');
+    add('uniform vec3 uTop,uBot,uHor,uAcc,uMoon; uniform float uFlash; uniform vec2 uRes2;');
+    add('float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }');
+    add('float noise(vec2 p){ vec2 i=floor(p),f=fract(p); vec2 u=f*f*(3.0-2.0*f);');
+    add('  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }');
+    add('float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<' + OCT + ';i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }');
+    add('float fbm3(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }');
+    add('void main(){');
+    add('  vec2 ndc = vP;');
+    add('  vec3 dir = normalize(uFwd + uRight*(ndc.x*uTanHalf*uAspect) + uUp*(ndc.y*uTanHalf));');
+    add('  float h = dir.y;');
+    add('  vec3 col = mix(uBot, uTop, smoothstep(-0.05,0.62,h));');
+    add('  col += uHor * exp(-abs(h-0.01)*13.0) * 0.34;');
+    add('  float ang = atan(dir.z, dir.x);');
+    add('  float n = fbm(vec2(ang*2.4 + uTime*0.012, h*4.6 - uTime*0.02));');
+    add('  float rays = 0.6 + 0.8*' + RAYS + '(vec2(ang*15.0 + uTime*0.03, h*1.5 + uTime*0.01));');
+    add('  float veils = pow(n,3.0)*rays*smoothstep(0.06,0.3,h)*(1.0-smoothstep(0.32,0.78,h));');
+    add('  col += mix(uHor,uAcc,0.55) * veils * 0.55;');
+    add('  float via = exp(-pow(dot(dir, normalize(vec3(0.18,0.77,0.6)))/0.14, 2.0));');
+    if (low) add('  via *= 0.95;');
+    else add('  via *= 0.5 + 0.9*fbm3(vec2(ang*3.0,h*6.0));');
+    add('  col += mix(uAcc, vec3(0.92,0.9,1.0), 0.6) * via * smoothstep(0.08,0.4,h) * 0.10;');
+    add('  vec2 sc = vec2(ang*38.0, h*70.0);');
+    add('  float st = step(0.9975, hash(floor(sc)));');
+    add('  float tw = 0.55+0.45*sin(uTime*2.0 + hash(floor(sc))*40.0);');
+    add('  col += vec3(st*tw*0.85) * smoothstep(0.04,0.5,h);');
+    add('  float hz = -0.02 + 0.035*sin(ang*3.1) + 0.022*sin(ang*7.3+1.2) + 0.014*sin(ang*13.7+2.4);');
+    add('  float ground = 1.0 - smoothstep(hz-0.012, hz+0.012, h);');
+    add('  vec3 g = vec3(0.020,0.017,0.052) + uHor*0.05;');
+    add('  col = mix(col, g, ground);');
+    add('  col += vec3(0.55,0.6,1.0) * uFlash * 0.35 * (1.0-ground);');
+    /* the moon: measured as an angular distance, never as a huge power */
+    add('  float mdist = length(dir - normalize(uMoon));');
+    add('  float disc = 1.0 - smoothstep(0.0155, 0.0210, mdist);');
+    add('  float glowM = exp(-800.0*mdist*mdist)*0.35 + exp(-60.0*mdist*mdist)*0.09;');
+    add('  col += vec3(1.0,0.97,0.88) * (disc * 2.2 + glowM) * smoothstep(0.02,0.2,h);');
+    add('  for (int i=0;i<' + STARS + ';i++){');
+    add('    float fi = float(i);');
+    add('    float t = fract(uTime*0.055 + fi*0.37);');
+    add('    vec2 a = vec2(-1.35 + fi*1.1, 1.15 - fi*0.45);');
+    add('    vec2 b = vec2(a.x + 0.42, a.y - 0.30);');
+    add('    vec2 p = mix(a, b, t);');
+    add('    vec2 pa = ndc - p, ba = b - a;');
+    add('    float hh = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);');
+    add('    float dline = length(pa - ba*hh);');
+    add('    float streak = (1.0 - smoothstep(0.0, 0.004, dline)) * (1.0 - smoothstep(0.55, 1.0, hh)) * (1.0 - smoothstep(0.0,0.35,abs(hh-1.0)));');
+    add('    col += vec3(0.95,0.92,1.0) * streak * 0.85 * (0.35 + 0.65*sin(t*3.14159));');
+    add('  }');
+    add('  col += (hash(gl_FragCoord.xy)-0.5)*(1.0/255.0);');
+    add('  gl_FragColor = vec4(col,1.0);');
+    add('}');
+    return o.join('\n');
+  }
 
   function shader(type, src) {
     var s = gl.createShader(type);
@@ -2123,7 +2137,7 @@ window.CWorld = (function () {
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.warn('link', gl.getProgramInfoLog(p)); return null; }
     var o = { p: p, u: {}, a: {} };
-    ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
+    ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha', 'uSizeMax'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uRes2'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     attribs.forEach(function (n) { o.a[n] = gl.getAttribLocation(p, n); });
     return o;
@@ -2171,8 +2185,8 @@ window.CWorld = (function () {
 
   function resize() {
     if (!gl || dead) return;
-    dpr = Math.min(window.devicePixelRatio || 1, LOW ? 1.15 : 1.6);
-    if (quality > 0) dpr = Math.max(0.7, dpr * 0.68);
+    dpr = Math.min(window.devicePixelRatio || 1, LOW ? 0.85 : 1.6);
+    if (quality > 0) dpr = Math.max(0.6, dpr * 0.72);
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
@@ -2190,8 +2204,14 @@ window.CWorld = (function () {
     return { eye: eye, ctr: ctr };
   }
 
+  var lastDraw = 0;
   function render() {
     if (!gl || paused || dead) return;
+    /* a phone does not need 60 frames of drifting sky: half the frames, half
+       the battery, and the watchdog gets an honest frame rate to judge */
+    var nowMs = performance.now();
+    if (LOW && nowMs - lastDraw < 30) { raf = requestAnimationFrame(render); return; }
+    lastDraw = nowMs;
     /* a throw inside a rAF callback would kill the loop for good and leave the
        sky frozen — catch it and fall back instead */
     try { frame(); } catch (e) { handOver('render error'); return; }
@@ -2201,20 +2221,23 @@ window.CWorld = (function () {
   function frame() {
     var now = performance.now();
     time = (now - t0) / 1000;
-    prog += (progT - prog) * 0.075;
+    var step = Math.min(3, Math.max(.4, (now - lastNow) / 16.67));   /* frames elapsed */
+    prog += (progT - prog) * Math.min(1, 0.075 * step);
 
     /* adaptive quality: a phone that cannot hold the flight gets a smaller
        render target first, and then the cheaper 2D sky */
     if (lastNow) {
       var dtf = now - lastNow;
       if (dtf > 0 && dtf < 500) { ftSum += dtf; ftN++; }
-      if (ftN >= 45) {
+      if (ftN >= (LOW ? 20 : 45)) {
         fps = Math.round(1000 / (ftSum / ftN));
         ftSum = 0; ftN = 0;
-        if (time > 2.5) {
-          if (fps < 24) {
+        if (time > 1.2) {
+          /* phones are judged at ~1s: the old two-window rule let a device that
+             hovers around 25fps stutter forever without ever being rescued */
+          if (fps < (LOW ? 26 : 24)) {
             slowStreak++;
-            if (slowStreak >= 2) {
+            if (slowStreak >= (LOW ? 1 : 2)) {
               slowStreak = 0;
               if (quality === 0) { quality = 1; resize(); }
               else { handOver('slow gpu ' + fps + 'fps'); return; }
@@ -2227,7 +2250,7 @@ window.CWorld = (function () {
 
     /* an occasional far-away lightning, like the reference sky */
     if (time > nextFlash) { flash = 1; nextFlash = time + rnd(7, 18); }
-    flash *= 0.94;
+    flash *= Math.pow(0.94, step);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clearColor(0.02, 0.015, 0.06, 1);
@@ -2272,6 +2295,7 @@ window.CWorld = (function () {
     gl.uniform1f(world.u.uTime, time);
     gl.uniform1f(world.u.uPixel, dpr);
     gl.uniform1f(world.u.uAlpha, 0.18 + 0.80 * Math.min(1, Math.max(0, prog * 7 - 0.15)));
+    gl.uniform1f(world.u.uSizeMax, LOW ? 7.0 : 13.0);
 
     chunks.forEach(function (c) {
       bindAttr(world, 'aPos', c.pos, 3);
@@ -2326,7 +2350,14 @@ window.CWorld = (function () {
     if (!gl) { reason = reason || 'no webgl'; return false; }
     try { rendererName = String(gl.getParameter(gl.RENDERER) || ''); } catch (e) {}
 
-    sky = program(SKY_V, SKY_F, ['aP']);
+    var cores = navigator.hardwareConcurrency || 8;
+    var coarsePtr = false;
+    try { coarsePtr = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); } catch (e) {}
+    /* phones and tablets get the light shader + light budget; a normal desktop
+       keeps the full one (a slow desktop is caught by the watchdog instead) */
+    LOW = coarsePtr || window.innerWidth < 820 || cores <= 2;
+
+    sky = program(SKY_V, skyFragment(LOW), ['aP']);
     world = program(VERT, FRAG, ['aPos', 'aCol', 'aSize', 'aSeed']);
     if (!sky || !world) { reason = 'shader compile failed'; return false; }
 
@@ -2334,10 +2365,6 @@ window.CWorld = (function () {
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
 
-    var cores = navigator.hardwareConcurrency || 4;
-    var coarsePtr = false;
-    try { coarsePtr = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); } catch (e) {}
-    LOW = window.innerWidth < 820 || cores <= 4 || coarsePtr;
     buildWorld();
     chunks = splitChunks();
 
@@ -2376,7 +2403,7 @@ window.CWorld = (function () {
   function info() {
     return {
       up: !!ok && !dead, dead: dead, reason: reason,
-      fps: fps, quality: quality, points: Math.round(S.length / 3),
+      fps: fps, quality: quality, points: Math.round(S.length / 3), low: LOW, cap: LOW ? 30 : 60,
       dpr: Math.round(dpr * 100) / 100, renderer: rendererName
     };
   }
@@ -2658,15 +2685,20 @@ window.CCursor = (function () {
         var name = act.getAttribute('data-name') || '';
         var roman = chap.split('·')[0].trim();
         if (chapterLabel && chapterLabel.textContent !== chap) chapterLabel.textContent = chap;
-        if (railChapter) railChapter.innerHTML = '<b>' + esc(roman) + '</b> <em>' + esc(name) + '</em>';
+        var railHtml = '<b>' + esc(roman) + '</b> <em>' + esc(name) + '</em>';
+        if (railChapter && railChapter.dataset.k !== railHtml) {   /* rebuilding HTML every frame is real work on a phone */
+          railChapter.dataset.k = railHtml;
+          railChapter.innerHTML = railHtml;
+        }
         var m = parseInt(act.getAttribute('data-mode'), 10) || 0;
         if (m !== lastMode) { lastMode = m; if (window.CStars) window.CStars.setMode(m); }
       }
-      var max = Math.max(1, document.documentElement.scrollHeight - vh);
-      var pct = Math.max(0, Math.min(1, sy / max));
+      /* scrollHeight is a forced layout — reuse the measurement taken on
+         resize/route changes instead of reading it on every scroll frame */
+      var pct = Math.max(0, Math.min(1, sy / Math.max(1, flightTotal)));
       if (railDot) railDot.style.top = (pct * 100) + '%';
       if (railChapter) railChapter.style.top = (pct * 100) + '%';
-      if (cue) cue.style.opacity = sy > 160 ? '0' : '1';
+      if (cue) { var co = sy > 160 ? '0' : '1'; if (cue.style.opacity !== co) cue.style.opacity = co; }
       if (window.CWorld) window.CWorld.setProgress(Math.max(0, Math.min(1, sy / flightTotal)));
     }
 
@@ -2684,10 +2716,10 @@ window.CCursor = (function () {
     window.addEventListener('scroll', nudge, { passive: true });
     window.addEventListener('touchmove', nudge, { passive: true });
     window.addEventListener('wheel', nudge, { passive: true });
-    window.addEventListener('resize', nudge);
+    window.addEventListener('resize', refresh);   /* the document can reflow: re-measure */
     window.addEventListener('orientationchange', function () { setTimeout(refresh, 240); });
     if (window.visualViewport && window.visualViewport.addEventListener) {
-      window.visualViewport.addEventListener('resize', nudge);
+      window.visualViewport.addEventListener('resize', refresh);
       window.visualViewport.addEventListener('scroll', nudge);
     }
     document.addEventListener('visibilitychange', function () {
@@ -3289,6 +3321,7 @@ window.CCursor = (function () {
       return [
         'sky: ' + (w.up ? 'webgl flying' : 'webgl OFF — ' + (w.reason || '?')),
         'fps ' + (w.fps || '–') + ' · dpr ' + (w.dpr || '–') + ' · points ' + (w.points || 0) + ' · quality ' + (w.quality || 0),
+        'shader ' + (w.low ? 'phone (2 octaves)' : 'full (5 octaves)') + ' · cap ' + (w.cap || 60) + 'fps',
         '2d sky: ' + (st.running ? 'running · ' + st.count + ' stars · mode ' + st.mode : 'off'),
         'reduced-motion ' + mq('(prefers-reduced-motion: reduce)') + ' · motion override ' + (document.documentElement.classList.contains('force-motion') ? 'yes' : 'no'),
         'view ' + window.innerWidth + '×' + window.innerHeight + ' · scroll ' + Math.round(window.scrollY || 0),
@@ -3460,22 +3493,28 @@ window.CCursor = (function () {
   }
 
   /* ---------------- boot ---------------- */
-  function boot() {
+  /* Sky: 'auto' flies the WebGL world (falling back to the 2D canvas sky),
+     'stars' keeps the lighter 2D sky — a per-device escape hatch from ☰ */
+  function startSky() {
+    if (S.settings.sky === 'stars' || !window.CWorld) { window.CStars.init(); if (window.__sceneUpdate) window.__sceneUpdate(); return; }
     var worldUp = false;
-    /* Sky: 'auto' flies the WebGL world (falling back to the 2D canvas sky),
-       'stars' keeps the lighter 2D sky — a per-device escape hatch from ☰ */
-    if (S.settings.sky !== 'stars' && window.CWorld) {
-      try { worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
-    }
+    try { worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
     if (worldUp) {
       document.body.classList.add('has-world');
       var total = Math.max(1, (document.getElementById('scenes') || document.body).scrollHeight - window.innerHeight);
-      if (window.CWorld) window.CWorld.setProgress((window.scrollY || 0) / total);
+      window.CWorld.setProgress((window.scrollY || 0) / total);
     } else { window.CStars.init(); }
+    if (window.__sceneUpdate) window.__sceneUpdate();
+  }
+
+  function boot() {
     renderHome(); window.__sceneUpdate = initScenes();
     if (window.CCursor) window.CCursor.init();
     initMotion(); initWizard(); initLibrary(); initOverlays(); initSound(); initRouting(); initPWA(); initDebug();
     syncStars();
+    /* building 20k+ particles is real work on a slow phone: let the hero paint
+       first, then raise the sky one frame later */
+    setTimeout(startSky, 90);
     if (S.settings.music && !A.isMusicOn()) { /* music starts on first sound gesture or when a story opens */ }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

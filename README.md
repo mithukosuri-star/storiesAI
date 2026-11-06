@@ -171,7 +171,28 @@ frame rate instead of dropping the show:
   slim progress line (it used to be hidden below 1000 px).
 - **The flying world defends itself**: it retries context creation with conservative options, catches
   a renderer that throws (instead of dying silently inside a rAF loop), and if the device holds
-  under ~24 fps it drops its render resolution once and then hands over to the 2D sky.
+  under ~26 fps it drops its render resolution once and then hands over to the 2D sky (~1 s later,
+  not after two slow windows).
+
+### Why the sky used to crawl on a phone
+
+The sky is a full-screen fragment shader and it was written for a desktop GPU:
+
+| | desktop | phone (now) |
+|---|---|---|
+| aurora noise | 5-octave fbm + two 3-octave fbm passes (~44 `sin` per pixel) | 2-octave fbm, one detail pass (~12) |
+| render scale | up to 1.6× device pixels | 0.85× CSS pixels |
+| frame rate | 60 fps | capped at 30 (a drifting sky does not need 60) |
+| point ceiling | 13 px | 7 px (fill rate) |
+| moon | `pow(md, 1600.0)` | `exp(-k·d²)` on the angular distance |
+
+That last row is what painted a giant white disc over the hero on Android: GPUs whose "highp" is
+really medium precision overflow `pow(x, 1600)` to Inf. The same maths also avoids the reversed
+`smoothstep` edges the shooting-star streaks used, which some mobile drivers do not define.
+
+Two more phone costs are gone: the choreography no longer reads `scrollHeight` (a forced layout)
+or rebuilds the rail chapter's markup on every scroll frame, and the particle world is built one
+frame after the hero paints instead of blocking the first render.
 
 ### If the sky on a phone is still a still picture
 
