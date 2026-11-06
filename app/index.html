@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1026" />
+    <title>FiabaMia · a bedtime fairy tale</title>
+    <meta
+      name="description"
+      content="Personalized bedtime stories for children. A fairy tale never read before, written tonight for the one you love."
+    />
+    <link rel="preconnect" href="https://www.fiabamia.com" />
+    <link rel="preload" as="image" href="/poster.svg" />
+  </head>
+  <body>
+    <!-- Scroll-locked stage that holds the original experience, unmodified. -->
+    <div id="stage" class="stage">
+      <!-- Poster shown until the framed site paints, so entry feels seamless. -->
+      <div class="veil" id="veil" aria-hidden="true">
+        <div class="veil-sky"></div>
+        <div class="veil-content">
+          <p class="veil-brand">FiabaMia</p>
+          <p class="veil-line">No one has ever told it<em>…</em></p>
+          <div class="veil-stars"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+
+      <iframe
+        id="scene"
+        class="scene"
+        title="FiabaMia — personalized bedtime stories for children"
+        src="https://www.fiabamia.com/"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope; xr-spatial-tracking"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen
+        loading="eager"
+      ></iframe>
+
+      <!-- Minimal controls. They live outside the iframe and never alter it. -->
+      <div class="hud" id="hud" data-collapsed="false">
+        <button class="hud-toggle" id="hudToggle" type="button" aria-expanded="true" aria-controls="hudPanel">
+          <span class="hud-dot" aria-hidden="true"></span>
+          <span class="hud-toggle-label">Scene</span>
+        </button>
+
+        <div class="hud-panel" id="hudPanel" role="toolbar" aria-label="Scene controls">
+          <button class="hud-btn" id="btnFullscreen" type="button" aria-pressed="false" title="Immersive mode">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4" />
+            </svg>
+            <span class="hud-label">Immersive</span>
+          </button>
+          <button class="hud-btn" id="btnReload" type="button" title="Restart the story from the beginning">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3 12a9 9 0 1 0 3.2-6.9M3 4v4.5h4.5" />
+            </svg>
+            <span class="hud-label">Restart</span>
+          </button>
+          <a class="hud-btn" href="https://www.fiabamia.com/" target="_blank" rel="noopener noreferrer" title="Open FiabaMia in a new tab">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+            </svg>
+            <span class="hud-label">Open</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Shown only if the framed site refuses to load. -->
+      <div class="fallback" id="fallback" hidden>
+        <div class="fallback-card">
+          <p class="fallback-kicker">The scene is being shy tonight</p>
+          <h1>The fairy tale is one tap away</h1>
+          <p>
+            This browser is blocking embedded pages. Open the story in its own window and every
+            animation, sound and 3D moment will play exactly as it should.
+          </p>
+          <a class="fallback-cta" href="https://www.fiabamia.com/" target="_blank" rel="noopener noreferrer">
+            Open FiabaMia
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
