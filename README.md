@@ -9,8 +9,10 @@ Progressive Web App.
 
 ## What is in here
 
-**The landing page** — a scroll you can *enter*: a moon, a real star field, letter-by-letter
-hero, and an "Awake → Asleep" scale that counts the chapters of the night backwards as you read.
+**The landing page** — a scroll you can *enter*: a **WebGL night** (an extruded 3D crescent that
+turns slowly, a parallax star field, drifting paper pages, golden dust and shooting stars, with a
+camera that follows your scroll and tilts with your pointer), a letter-by-letter hero, and an
+"Awake → Asleep" scale that counts the chapters of the night backwards as you read.
 Then: the story recipe (name, age, value, place, little villain) with a live preview page,
 music moods you can actually hear, golden words you can tap, voice colours that read themselves
 aloud, age groups, parent quotes, Star packs, how it works, FAQ, and a goodnight.
@@ -48,8 +50,13 @@ npm run preview  # serve the production build
 - **Fonts** are bundled (`@fontsource`): Cormorant Garamond for the display serif, Jost for UI.
 - **Everything else** is hand-written CSS (`src/styles/`), SVG scenery and canvas stars. No image
   assets other than the generated app icons (`npm run icons`).
+- **The 3D night** lives in `src/three/nightScene.ts` (three.js, imported dynamically so first paint
+  is never blocked). It falls back to the 2D canvas star field when WebGL is unavailable, honours
+  `prefers-reduced-motion` with a still frame, and disposes every geometry, material and texture on
+  unmount.
 - `scripts/ssr-check.mjs` renders every page on the server as a smoke test;
-  `scripts/dump-story.mjs` prints a generated story to the terminal.
+  `scripts/dump-story.mjs` prints a generated story to the terminal;
+  `scripts/moon-test.mjs` checks the 3D crescent geometry before it reaches the GPU.
 
 ## Structure
 

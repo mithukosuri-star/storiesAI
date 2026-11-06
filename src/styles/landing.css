@@ -22,9 +22,46 @@
 .stars-canvas {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 0;
   pointer-events: none;
   opacity: 0.85;
+}
+
+.night-host {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.8s var(--ease);
+}
+
+.night-host.is-ready {
+  opacity: 1;
+}
+
+.night-host .night-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* the CSS moon steps aside once the real 3D moon has risen */
+.moon-wrap {
+  transition: opacity 1.6s var(--ease);
+}
+
+:root.has-3d .moon-wrap {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+:root.has-3d .hero-glow {
+  background:
+    radial-gradient(46% 46% at 76% 16%, rgba(220, 184, 124, 0.1), transparent 72%),
+    radial-gradient(60% 55% at 20% 82%, rgba(90, 120, 190, 0.12), transparent 75%);
 }
 
 /* ---------------- top bar ---------------- */
@@ -710,9 +747,20 @@
 }
 
 /* the little preview page */
-.preview-page {
+.preview-wrap {
   position: sticky;
   top: 12vh;
+  perspective: 1100px;
+}
+
+.preview-page {
+  position: relative;
+  --rx: 0deg;
+  --ry: 0deg;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transform-style: preserve-3d;
+  transition: transform 0.45s var(--ease), border-color 0.4s ease;
+  will-change: transform;
   padding: clamp(1.6rem, 3vw, 2.6rem);
   border: 1px solid var(--line-soft);
   background:
@@ -1790,5 +1838,34 @@
   }
   .hero-scroll {
     letter-spacing: 0.22em;
+  }
+}
+
+/* the live preview sits a few millimetres off the page */
+.preview-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: radial-gradient(
+    380px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(220, 184, 124, 0.13),
+    transparent 70%
+  );
+}
+
+.preview-wrap:hover .preview-page::after {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .preview-wrap {
+    position: static;
+    perspective: none;
+  }
+  .preview-page {
+    transform: none;
   }
 }

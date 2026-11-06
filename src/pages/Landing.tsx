@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Header, SoundToggle } from '../components/Header'
 import { SleepRail } from '../components/SleepRail'
-import { Starfield, Landscape, MoonGlyph, Motes } from '../components/Decor'
+import { Landscape, MoonGlyph, Motes } from '../components/Decor'
+import { NightScene } from '../components/NightScene'
 import { Reveal } from '../components/Motion'
 import { Pieces } from '../components/GoldenLine'
 import { Icon, BrandMark } from '../components/Icons'
@@ -174,7 +175,26 @@ const previews: Record<string, { title: string; before: string; hl: string; afte
 function MadeToMeasure() {
   const [active, setActive] = useState('name')
   const navigate = useNavigate()
+  const tiltRef = useRef<HTMLDivElement | null>(null)
   const p = previews[active]
+
+  const tilt = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = tiltRef.current
+    if (!el || e.pointerType === 'touch') return
+    const r = el.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width - 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5
+    el.style.setProperty('--ry', `${px * 9}deg`)
+    el.style.setProperty('--rx', `${-py * 7}deg`)
+    el.style.setProperty('--mx', `${(px + 0.5) * 100}%`)
+    el.style.setProperty('--my', `${(py + 0.5) * 100}%`)
+  }
+  const untilt = () => {
+    const el = tiltRef.current
+    if (!el) return
+    el.style.setProperty('--ry', '0deg')
+    el.style.setProperty('--rx', '0deg')
+  }
 
   return (
     <section className="section" id="made" data-chapter data-chapter-name="Made to measure">
@@ -213,8 +233,9 @@ function MadeToMeasure() {
             </div>
           </Reveal>
 
-          <Reveal delay={140} className="preview-page">
-            <div>
+          <Reveal delay={140} className="preview-wrap">
+            <div className="preview-page" ref={tiltRef} onPointerMove={tilt} onPointerLeave={untilt}>
+              <div>
               <div className="preview-eyebrow">
                 <span>Preview · page one</span>
                 <span>★</span>
@@ -225,10 +246,11 @@ function MadeToMeasure() {
                 <span className="hl">{p.hl}</span>
                 {p.after}
               </p>
-            </div>
-            <div className="preview-foot">
-              <span>Music · {active === 'place' ? 'magical' : 'gentle'}</span>
-              <span>3–7 min</span>
+              </div>
+              <div className="preview-foot">
+                <span>Music · {active === 'place' ? 'magical' : 'gentle'}</span>
+                <span>3–7 min</span>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -852,7 +874,7 @@ export default function Landing() {
 
   return (
     <div className="site">
-      <Starfield />
+      <NightScene />
       <div className="dream-veil" ref={veilRef} />
       <Header />
       <SleepRail />
