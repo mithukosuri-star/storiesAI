@@ -223,6 +223,34 @@ body.app-view .sound-fixed{display:none}
 .sound-word{display:inline-block;background:none;border:1px solid rgba(243,211,138,.65);border-radius:48% 52% 45% 55% / 62% 44% 56% 38%;padding:0 9px;margin:0 2px;color:var(--gold);font:inherit;font-style:italic;cursor:pointer;transition:.22s;transform:rotate(-1deg)}
 .sound-word:hover,.sound-word:focus-visible{color:#fff3d0;text-shadow:0 0 18px rgba(243,211,138,.7);border-color:var(--gold-2)}
 .sound-word.tapped{animation:pop .6s}
+/* a golden word that has just spoken rests: dimmed, untappable, still focusable */
+.sound-word.word-resting{opacity:.34;pointer-events:none;transition:opacity .45s var(--ease)}
+/* kinetic text: GPU-only properties, so a phone never re-lays-out the page */
+.sound-word.word-wind{animation:wordWind 4s ease-in-out infinite;transform-origin:50% 85%;will-change:transform}
+@keyframes wordWind{
+  0%,100%{transform:rotate(-1deg) skewX(0deg)}
+  30%{transform:rotate(-1.4deg) skewX(5deg)}
+  70%{transform:rotate(-.6deg) skewX(-5deg)}
+}
+.sound-word.word-magic{animation:wordGlow 4.6s ease-in-out infinite}
+/* the sparkle pops even when the word itself is already animating */
+.sound-word.tapped .sw-dot{animation:pop .6s}
+@keyframes wordGlow{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(243,211,138,.40))}
+  50%{filter:drop-shadow(0 0 13px rgba(243,211,138,.85))}
+}
+/* progressive reading focus: the paragraph under the eye is lit, the rest dim */
+.chapter .prose p{margin:0 0 .62em;transition:opacity .55s var(--ease)}
+.chapter .prose p:last-child{margin-bottom:0}
+.chapter .prose p.para-dim{opacity:.35}
+.chapter .prose p.para-active{opacity:1}
+@media(prefers-contrast:more){.chapter .prose p.para-dim{opacity:.6}}
+@media(prefers-reduced-motion:reduce){
+  html:not(.force-motion) .sound-word.word-wind,
+  html:not(.force-motion) .sound-word.word-magic{animation:none}
+  html:not(.force-motion) .sound-word.word-resting{transition-duration:.14s}
+  html:not(.force-motion) .chapter .prose p{transition-duration:.14s}
+}
 @keyframes pop{0%{transform:rotate(-1deg) scale(1)}40%{transform:rotate(-1deg) scale(1.13)}100%{transform:rotate(-1deg) scale(1)}}
 .voice-row{display:flex;justify-content:center;gap:34px;flex-wrap:wrap;margin-top:48px}
 .voice-item{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:130px;background:none;border:0;text-align:center}
@@ -327,6 +355,8 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .gen{min-height:78vh;min-height:78svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:20px}
 .gen .moon-spin{width:92px;height:92px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:34px;color:var(--gold);animation:float 3.4s ease-in-out infinite;box-shadow:0 0 70px rgba(243,211,138,.14)}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.gen #genLine{transition:opacity .22s ease}
+@media(prefers-reduced-motion:reduce){html:not(.force-motion) .gen #genLine{transition:none}}
 .gen .lines{font-family:var(--script);font-style:italic;font-size:22px;color:var(--muted);height:30px}
 .gen .bar{width:min(340px,80vw);height:2px;background:rgba(246,238,223,.1)}
 .gen .bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .5s}
@@ -718,8 +748,8 @@ body.is-offline .offline-badge{display:block}
   <div class="page gen">
     <div class="moon-spin">✦</div>
     <h2 class="display">Weaving <span class="gold-script">tonight's story</span>…</h2>
-    <div class="lines" id="genLine">Gathering a little moonlight…</div>
-    <div class="bar"><i id="genBar"></i></div>
+    <div class="lines" id="genLine" role="status" aria-live="polite" aria-atomic="true">Gathering a little moonlight…</div>
+    <div class="bar" id="genBarWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="genBar"></i></div>
     <p class="quiet small" id="genNote">Everything happens right here on your device.</p>
   </div>
 </section>
@@ -1083,15 +1113,28 @@ window.CDATA = (function () {
 window.CAudio = (function () {
   var ctx = null, master = null, musicBus = null, sfxBus = null;
   var loop = null, mood = null, step = 0, musicOn = false, soundOn = false, duckTimer = null;
+  /* sleep-conducive state: a low-pass "night curtain" over everything, a tempo
+     scale the chord clock reads, and the interrupt fade for a locked screen */
+  var nightFilter = null, nightOn = false, tempoScale = 1, tempoTimer = 0, idleTimer = 0;
 
   function ensure() {
     if (!ctx) {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ctx = new AC();
-      master = ctx.createGain(); master.gain.value = 0.85; master.connect(ctx.destination);
+      master = ctx.createGain(); master.gain.value = 0.85;
+      /* music AND effects pass through the night curtain, so one node can
+         soften the whole app as the story says goodnight */
+      nightFilter = ctx.createBiquadFilter();
+      nightFilter.type = 'lowpass';
+      nightFilter.frequency.value = 20000;   /* wide open by day */
+      nightFilter.Q.value = 0.0001;          /* no resonant whistle at the corner */
+      master.connect(nightFilter);
+      nightFilter.connect(ctx.destination);
       musicBus = ctx.createGain(); musicBus.gain.value = 0; musicBus.connect(master);
       sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
+      /* the story said goodnight before any sound was ever made */
+      if (nightOn) { master.gain.value = 0.34; nightFilter.frequency.value = 800; tempoScale = 1.18; }
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
@@ -1150,7 +1193,8 @@ window.CAudio = (function () {
     notes.push(notes[0] / 2);
     for (i = 0; i < notes.length; i++) {
       n = notes[i];
-      tone({ freq: n, dur: cfg.pace, type: cfg.wave, gain: 0.045, attack: 0.9, hold: cfg.pace * 0.4, release: cfg.pace * 0.8, bus: musicBus, delay: i * 0.11 });
+      var pace = cfg.pace * tempoScale;
+      tone({ freq: n, dur: pace, type: cfg.wave, gain: 0.045, attack: 0.9, hold: pace * 0.4, release: pace * 0.8, bus: musicBus, delay: i * 0.11 });
     }
     var sparkle = notes[(step * 2 + 1) % notes.length] * 2;
     tone({ freq: sparkle, to: sparkle * 1.002, dur: 1.5, type: 'sine', gain: 0.018, attack: 0.25, hold: 0.05, release: 1.3, bus: musicBus, delay: 0.6 });
@@ -1166,8 +1210,71 @@ window.CAudio = (function () {
     musicBus.gain.setValueAtTime(musicBus.gain.value, now());
     musicBus.gain.linearRampToValueAtTime(0.85, now() + 1.6);
     chord(cfg);
-    loop = setInterval(function () { if (musicOn) chord(mood); }, cfg.pace * 1000);
+    loop = setInterval(function () { if (musicOn) chord(mood); }, cfg.pace * 1000 * tempoScale);
   }
+
+  /* ---- the chord clock has to be re-armed when the tempo changes ---- */
+  function reschedule() {
+    if (!musicOn || !loop || !mood) return;
+    clearInterval(loop);
+    loop = setInterval(function () { if (musicOn) chord(mood); }, mood.pace * 1000 * tempoScale);
+  }
+  function glideTempo(to, seconds) {
+    if (tempoTimer) clearInterval(tempoTimer);
+    var from = tempoScale, t0 = Date.now();
+    tempoTimer = setInterval(function () {
+      var k = Math.min(1, (Date.now() - t0) / (seconds * 1000));
+      tempoScale = from + (to - from) * k;
+      if (k >= 1) { clearInterval(tempoTimer); tempoTimer = 0; reschedule(); }
+    }, 250);
+  }
+
+  /* ---- night mode: 20 s, reversible, idempotent ---- */
+  function nightMode(on) {
+    on = !!on;
+    if (on === nightOn) return;
+    nightOn = on;
+    if (!ctx) return;                 /* no audio yet: applied on the first ensure() */
+    var t = now(), R = 20;
+    var vol = soundOn ? (on ? 0.34 : 0.85) : 0.0001;      /* -60% when on */
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t);
+    master.gain.linearRampToValueAtTime(vol, t + R);
+
+    var f = nightFilter.frequency;
+    f.cancelScheduledValues(t);
+    f.setValueAtTime(Math.max(40, f.value), t);
+    /* exponential reads as a curtain closing; linear sounds like a knob turn */
+    f.exponentialRampToValueAtTime(on ? 800 : 20000, t + R);
+
+    glideTempo(on ? 1.18 : 1, R);                          /* 1/1.18 = -15.3% bpm */
+  }
+
+  /* ---- interruptions: lock the screen or switch apps, don't clip a note ---- */
+  function fadeForInterrupt() {
+    if (!ctx || !master) return;
+    var t = now();
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t);
+    master.gain.linearRampToValueAtTime(0.0001, t + 1.0);
+    if (idleTimer) clearTimeout(idleTimer);
+    /* a muted oscillator still burns DSP on Android: suspend once we are silent */
+    idleTimer = setTimeout(function () { try { ctx.suspend(); } catch (e) {} }, 1150);
+  }
+  function fadeFromInterrupt() {
+    if (!ctx) return;
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = 0; }
+    try { ctx.resume(); } catch (e) {}
+    var t = now(), vol = soundOn ? (nightOn ? 0.34 : 0.85) : 0.0001;
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t);
+    master.gain.linearRampToValueAtTime(vol, t + 0.8);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') fadeForInterrupt(); else fadeFromInterrupt();
+  });
+  window.addEventListener('pagehide', fadeForInterrupt);
+  window.addEventListener('pageshow', fadeFromInterrupt);
 
   function stopMusic() {
     musicOn = false;
@@ -1222,7 +1329,8 @@ window.CAudio = (function () {
   function setSound(on) {
     soundOn = !!on;
     if (soundOn) ensure();
-    if (master && ctx) master.gain.setTargetAtTime(soundOn ? 0.85 : 0.0001, now(), 0.15);
+    var v = on ? (nightOn ? 0.34 : 0.85) : 0.0001;
+    if (master && ctx) master.gain.setTargetAtTime(v, now(), 0.15);
   }
 
   /* ---- read aloud using the device's own voices (no network) ----
@@ -1270,6 +1378,7 @@ window.CAudio = (function () {
     ensure: ensure, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
     playSfx: playSfx, setSound: setSound, isSoundOn: function () { return soundOn; },
     speak: speak, stopSpeak: stopSpeak, isSpeaking: isSpeaking,
+    nightMode: nightMode, isNight: function () { return nightOn; },
     isMusicOn: function () { return musicOn; }
   };
 })();
@@ -1569,12 +1678,16 @@ window.CEngine = (function () {
     return Promise.resolve(weaveOffline(cfg));
   }
 
+  /* wind sways, weather and bells glow: the class is chosen here because the
+     markup for a golden word is generated, never hand written */
+  var WORD_CLASS = { wind: 'word-wind', thunder: 'word-magic', waves: 'word-magic', bells: 'word-magic', twinkle: 'word-magic' };
   function renderText(raw) {
     return String(raw)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/\[\[(\w+)\|([^\]]+)\]\]/g, function (m, key, word) {
         if (!D.SFX[key]) return word;
-        return '<button type="button" class="sound-word" data-sfx="' + key + '" title="Tap to hear ' + D.SFX[key].label + '" aria-label="Hear ' + D.SFX[key].label + '"><span class="sw-dot">✦</span>' + word + '</button>';
+        var cls = WORD_CLASS[key] ? ' ' + WORD_CLASS[key] : '';
+        return '<button type="button" class="sound-word' + cls + '" data-sfx="' + key + '" title="Tap to hear ' + D.SFX[key].label + '" aria-label="Hear ' + D.SFX[key].label + '"><span class="sw-dot">✦</span>' + word + '</button>';
       });
   }
 
@@ -3302,9 +3415,37 @@ window.CCursor = (function () {
     });
   }
 
+  /* ---- golden words: 3 s rest between taps, and a delicate haptic ----
+     A child can hit the same word twenty times in a second, which is exactly
+     how a calm bedtime turns into a game. One word, one sound, then it rests. */
+  var REST_MS = 3000, RESTING = 'word-resting';
+  var HAPTIC = { thunder: [30, 50, 20], waves: [30, 50, 20], wind: [30, 50, 20], drum: [30, 50, 20], rain: [30, 50, 20] };
+
+  function haptic(key) {
+    try {
+      if (!navigator.vibrate) return;                    /* desktop, iOS Safari */
+      var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (calm && !document.documentElement.classList.contains('force-motion')) return;
+      navigator.vibrate(HAPTIC[key] || 15);              /* light spark, or a ripple */
+    } catch (e) { /* some WebViews throw on vibrate */ }
+  }
+
   function soundTap(btn) {
+    if (!btn || btn.classList.contains(RESTING)) return;
     A.setSound(true); syncSound();
-    A.playSfx(btn.dataset.sfx); btn.classList.remove('tapped'); void btn.offsetWidth; btn.classList.add('tapped');
+    A.playSfx(btn.dataset.sfx);
+    haptic(btn.dataset.sfx);
+    btn.classList.remove('tapped'); void btn.offsetWidth; btn.classList.add('tapped');
+
+    btn.classList.add(RESTING);
+    btn.setAttribute('aria-disabled', 'true');           /* stays in the tab order */
+    var token = btn.__rest = (btn.__rest || 0) + 1;      /* a re-render must not strand the class */
+    setTimeout(function () {
+      if (btn.__rest !== token) return;
+      btn.classList.remove(RESTING);
+      btn.removeAttribute('aria-disabled');
+    }, REST_MS);
+
     var sfx = D.SFX[btn.dataset.sfx];
     if (sfx) toast(sfx.emoji + ' ' + sfx.label);
   }
@@ -3382,7 +3523,38 @@ window.CCursor = (function () {
   }
 
   /* ---------------- story creation ---------------- */
-  var genLines = ['Gathering a little moonlight…', 'Choosing a name for the wind…', 'Tuning the small golden bells…', 'Folding the path towards home…', 'Tucking the last sentence in…'];
+  /* ---------------- "stories weaving": the ingredients, spoken back ----------------
+     The wait is the one moment the child is guaranteed to be listening, so it
+     says their own story back to them instead of a generic spinner. */
+  var weaveTimers = [];
+  function weaveLines(cfg) {
+    var hero = String(cfg.names || '').split(/[,&]|\band\b/)[0].trim() || 'your little one';
+    var st = findSetting(cfg.setting);
+    var lesson = String(label('value', cfg.value) || 'kindness').toLowerCase();
+    return [
+      { at: 0,     text: 'Gathering moonlight to guide ' + hero + '…' },
+      { at: 7000,  text: 'Building a pathway into the heart of ' + (st.place || 'the woods') + '…' },
+      { at: 14000, text: 'Weaving a quiet lesson about ' + lesson + '…' },
+      { at: 22000, text: cfg.villain ? 'Softening the edges of a little villain…' : 'Tucking the stars in, one by one…' }
+    ];
+  }
+  function stopWeave() {
+    weaveTimers.forEach(clearTimeout); weaveTimers = [];
+  }
+  function runWeave(cfg) {
+    stopWeave();
+    var el = $('#genLine'); if (!el) return;
+    var lines = weaveLines(cfg), i;
+    el.style.opacity = '1'; el.textContent = lines[0].text;
+    for (i = 1; i < lines.length; i++) {
+      (function (line) {
+        weaveTimers.push(setTimeout(function () {
+          el.style.opacity = '0';                      /* 220 ms fade, then new words */
+          weaveTimers.push(setTimeout(function () { el.textContent = line.text; el.style.opacity = '1'; }, 220));
+        }, line.at));
+      })(lines[i]);
+    }
+  }
   function createStory(overrideCfg) {
     var cfg = overrideCfg || JSON.parse(JSON.stringify(S.wizard));
     if (!cfg.names || !cfg.names.trim()) { location.hash = '#/create'; toast('First, give the hero a name ✦'); return; }
@@ -3391,19 +3563,23 @@ window.CCursor = (function () {
     location.hash = '#/generating';
     var ai = S.settings.ai.enabled && S.settings.ai.endpoint ? S.settings.ai : null;
     $('#genNote').textContent = ai ? 'Asking your own AI storyteller… offline is the fallback.' : 'Everything happens right here on your device.';
-    var li = 0, pct = 0;
-    $('#genLine').textContent = genLines[0]; $('#genBar').style.width = '6%';
+    runWeave(cfg);
+    var pct = 4;
+    $('#genBar').style.width = pct + '%';
+    var barWrap = $('#genBarWrap');
     var iv = setInterval(function () {
-      li = Math.min(genLines.length - 1, li + 1);
-      $('#genLine').textContent = genLines[li];
-      pct = Math.min(92, pct + 16 + Math.random() * 9);
-      $('#genBar').style.width = pct + '%';
-    }, 520);
+      pct = Math.min(92, pct + (92 - pct) * 0.06);
+      $('#genBar').style.width = pct.toFixed(1) + '%';
+      if (barWrap) barWrap.setAttribute('aria-valuenow', String(Math.round(pct)));
+    }, 400);
     var started = Date.now();
     E.generate(cfg, ai).then(function (story) {
-      var wait = Math.max(0, 2100 - (Date.now() - started));
+      /* the local engine finishes in ~1 s; hold the curtain long enough for the
+         child to hear their own name and their own place (beats at 0 s and 7 s) */
+      var wait = Math.max(0, 7800 - (Date.now() - started));
       setTimeout(function () {
-        clearInterval(iv); $('#genBar').style.width = '100%';
+        clearInterval(iv); stopWeave(); $('#genBar').style.width = '100%';
+        if (barWrap) barWrap.setAttribute('aria-valuenow', '100');
         S.stars -= 1;
         if (cfg.type === 'series') story.seriesId = cfg.seriesId || ('series-' + Date.now().toString(36));
         story.chapterNumber = cfg.chapterNumber || 1;
@@ -3412,7 +3588,7 @@ window.CCursor = (function () {
         setTimeout(function () { openStory(story.id); if (story.fallbackNotice) toast(story.fallbackNotice); }, 320);
       }, wait);
     }).catch(function (err) {
-      clearInterval(iv);
+      clearInterval(iv); stopWeave();
       toast('Could not weave that story: ' + err.message);
       location.hash = '#/create';
     });
@@ -3426,6 +3602,30 @@ window.CCursor = (function () {
     location.hash = '#/story/' + encodeURIComponent(id);
   }
 
+  /* The reader used to hold a whole chapter in one block of prose, so there was
+     nothing for a reading focus to move between. Sentences are grouped into
+     short, breath-sized paragraphs (≈190 characters) instead — the rhythm stays
+     close to the original, and the focus has something to follow. */
+  function paragraphise(raw) {
+    var text = String(raw || '').replace(/\s+/g, ' ').trim();
+    var sentences = [], cur = '', i, ch, next;
+    for (i = 0; i < text.length; i++) {
+      ch = text.charAt(i); cur += ch;
+      next = text.charAt(i + 1) || ' ';
+      if ((ch === '.' || ch === '!' || ch === '?' || ch === '…') && next === ' ') {
+        sentences.push(cur.trim()); cur = '';
+      }
+    }
+    if (cur.trim()) sentences.push(cur.trim());
+    var out = [], buf = '';
+    sentences.forEach(function (s) {
+      if (buf && (buf + ' ' + s).length > 190) { out.push(buf); buf = s; }
+      else buf = buf ? buf + ' ' + s : s;
+    });
+    if (buf) out.push(buf);
+    return out.length ? out : [text];
+  }
+
   function renderStory(story) {
     applyTheme(story);
     if (S.settings.music && S.settings.sound) { A.setSound(true); A.startMusic(story.cfg.mood); syncSound(); }
@@ -3436,7 +3636,9 @@ window.CCursor = (function () {
         '<div class="voice-tag"><i></i>' + v.label + ' voice · ' + v.hint + '</div>' +
         '<div class="voice-hint">' + esc(v.line) + '</div>' +
         '<h3>' + esc(c.title) + '</h3>' +
-        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + E.renderText(c.text) + '</div>' +
+        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + paragraphise(c.text).map(function (p) {
+          return '<p>' + E.renderText(p) + '</p>';
+        }).join('') + '</div>' +
         '<div class="chap-num">' + String(i + 1).padStart(2, '0') + ' / ' + String(story.chapters.length).padStart(2, '0') + '</div></article>';
     }).join('');
 
@@ -3468,6 +3670,9 @@ window.CCursor = (function () {
       '<p class="small muted center" style="margin-top:26px">Tap any golden word to hear it. The music softens for a moment to make room.</p>';
     $('#reader').innerHTML = html;
     $('#reader').style.setProperty('--readsize', (S.settings.fontSize || 20) + 'px');
+    startReadingFocus();
+    wakeOn();                      /* do not let the display sleep mid-sentence */
+    A.nightMode(false);            /* a new story starts in daylight audio */
 
     /* interactions (assignment avoids stacking listeners on re-render) */
     $('#reader').onclick = function (e) {
@@ -3507,6 +3712,67 @@ window.CCursor = (function () {
     };
     $$('.chapter-nav button')[0] && $$('.chapter-nav button')[0].classList.add('active');
     $('#musicToggle').classList.toggle('active', A.isMusicOn());
+  }
+
+  /* ---------------- dark-room reading: focus, wake lock, night mode ----------------
+     Three small things that make a phone in a dark bedroom behave:
+     · the paragraph under the eye is lit, the rest dims to 35%
+     · the screen is not allowed to sleep mid-sentence
+     · the last two chapters fade the audio into 800 Hz and slow it down      */
+  var focusIO = null, wakeSentinel = null;
+
+  function wakeOn() {
+    if (!('wakeLock' in navigator) || wakeSentinel) return;
+    try {
+      navigator.wakeLock.request('screen').then(function (s) {
+        wakeSentinel = s;
+        s.addEventListener('release', function () { wakeSentinel = null; });
+      }).catch(function () { wakeSentinel = null; });      /* battery saver, iOS */
+    } catch (e) { wakeSentinel = null; }
+  }
+  function wakeOff() {
+    try { if (wakeSentinel) { wakeSentinel.release(); wakeSentinel = null; } } catch (e) {}
+  }
+  /* the browser drops the lock whenever the page hides: take it back */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && $('#view-story').classList.contains('active')) wakeOn();
+  });
+
+  function stopReadingFocus() {
+    if (focusIO) { focusIO.disconnect(); focusIO = null; }
+    $$('#reader .prose p').forEach(function (p) { p.classList.remove('para-dim', 'para-active'); });
+  }
+
+  function startReadingFocus() {
+    stopReadingFocus();
+    if (!('IntersectionObserver' in window)) return;      /* no observer: everything stays lit */
+    var paras = $$('#reader .chapter .prose p');
+    var chapters = $$('#reader .chapter');
+    var endCard = $('#reader .end-card');
+    var lastTwo = Math.max(0, chapters.length - 2);       /* ch. VII · Goodnight onward */
+    paras.forEach(function (p) { p.classList.add('para-dim'); });
+
+    focusIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var t = en.target;
+        if (t.classList.contains('end-card')) {
+          if (en.isIntersecting) { A.nightMode(true); wakeOff(); }   /* The end */
+          return;
+        }
+        if (t.classList.contains('chapter')) {
+          if (!en.isIntersecting) return;
+          var idx = parseInt(String(t.id).replace('chap-', ''), 10) || 0;
+          A.nightMode(idx >= lastTwo);
+          return;
+        }
+        t.classList.toggle('para-active', en.isIntersecting);
+        t.classList.toggle('para-dim', !en.isIntersecting);
+      });
+    }, { rootMargin: '-42% 0px -42% 0px', threshold: 0 });
+
+    paras.forEach(function (p) { focusIO.observe(p); });
+    chapters.forEach(function (c) { focusIO.observe(c); });
+    if (endCard) focusIO.observe(endCard);
   }
 
   function toggleReadAloud(story) {
@@ -3834,7 +4100,10 @@ window.CCursor = (function () {
     $$('.view').forEach(function (v) { v.classList.remove('active'); });
     var el = $('#view-' + name);
     if (el) el.classList.add('active');
-    if (name !== 'story') { clearTheme(); A.stopMusic(); A.stopSpeak(); reading = false; }
+    if (name !== 'story') {
+      clearTheme(); A.stopMusic(); A.stopSpeak(); reading = false;
+      wakeOff(); stopReadingFocus(); A.nightMode(false);
+    }
     if (name !== 'create' && name !== 'story' && window.CWorld && window.CWorld.setScene) window.CWorld.setScene(null);
     document.body.classList.toggle('app-view', name !== 'home');
     if (name === 'home') {

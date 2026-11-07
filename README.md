@@ -197,6 +197,45 @@ book** in front of the camera, turns one page, then dissolves back into stars as
 - **Reduced motion** collapses all of it to a still frame, and the hero copy is not hidden if the
   animation cannot run.
 
+### The reading room (dark-bedroom behaviour)
+
+Four layers that only exist for the last ten minutes of the day.
+
+**1 · The story goes to sleep as it ends.** The whole audio graph now runs through a low-pass
+"night curtain" (`master → lowpass → destination`), so music *and* effects can be softened with one
+node. When the reader reaches the last two chapters, `CAudio.nightMode(true)` ramps the master gain
+to 40 % (−60 %), sweeps the filter down to 800 Hz, and glides the chord transport by +18 % (i.e.
+−15.3 % bpm) — all over 20 s, all reversible. The chord clock is re-armed when the tempo lands.
+Locking the screen or switching apps fades the master to silence over 1.0 s and then *suspends* the
+context 150 ms later (a muted oscillator still burns DSP on Android); returning resumes it and fades
+back to the right level, night or day.
+
+**2 · Golden words rest.** One word, one sound, then a 3 s cooldown: `.word-resting` dims the word
+to 34 % and takes its pointer events away, `aria-disabled` keeps screen readers honest, and the
+deadline is token-guarded so a re-render can never strand the class. The tap also fires a
+micro-haptic — `15 ms` for a spark, `[30, 50, 20]` for weather (thunder, waves, wind, rain, drum) —
+feature-detected, and skipped under reduced motion.
+
+**3 · Dark-room reading.** `.word-wind` sways a golden word on a 4 s `skewX` loop and `.word-magic`
+breathes a `drop-shadow` glow; both are transform/filter only, so nothing relayouts. The paragraph
+under the eye stays at 100 % while its neighbours drop to 35 % (a `prefers-contrast: more` escape
+lifts that floor to 60 %), driven by one `IntersectionObserver` with a ±42 % band — no scroll
+listener. The same observer flips night mode at the last two chapters and releases the wake lock at
+the end card. `navigator.wakeLock.request('screen')` is taken when a story opens, re-taken on
+`visibilitychange`, and always released on leaving the reader.
+
+The reader used to be **one block of prose per chapter**, which left nothing for a focus to move
+between, so chapters are now split into breath-sized paragraphs (~190 characters each) at render
+time.
+
+**4 · Stories weaving.** The 30-second wait says the ingredients back: *"Gathering moonlight to
+guide Mira…" → "Building a pathway into the heart of the quiet floor of the sea…" → "Weaving a
+quiet lesson about kindness…" → "Softening the edges of a little villain…"*. Each line fades through
+inline opacity (no layout), the block is an `aria-live="polite"` region, and the bar is a real
+`role="progressbar"` with `aria-valuenow`. The local engine finishes in about a second, so the
+curtain holds for 7.8 s — long enough for the first two beats — and an AI generation that takes
+longer simply plays the rest.
+
 ### The world dial (story settings)
 
 Every story setting owns a world, and the builder shows it to you: tapping a place in
