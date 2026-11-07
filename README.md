@@ -236,6 +236,38 @@ inline opacity (no layout), the block is an `aria-live="polite"` region, and the
 curtain holds for 7.8 s — long enough for the first two beats — and an AI generation that takes
 longer simply plays the rest.
 
+### The desk, the preview word, and the install nudge
+
+Five small changes from one pass over the first thirty seconds of the app.
+
+- **A word you can hear before you sign up.** Under the hero sentence sits a mock line of prose with
+  two golden words in it (`The gentle [wind] blew through the trees`). The words are real
+  `.sound-word` buttons wired to the same `soundTap()` the reader uses, so the demo costs nothing —
+  no account, no audio file, no second code path. The kicker above it says so out loud:
+  *"Click a golden word — no account needed"*.
+- **A quieter desk.** Steps III and IV now offer five curated chips each — values *kindness, sharing,
+  courage, patience, curiosity*; places *cozy forest, outer space, secret treehouse, coral reef, cloud
+  castle* — plus a **+ Add custom** chip that reveals a one-field input. The ids never change, only
+  the labels, so old stories keep rendering after a rename. A typed place or lesson overrides the
+  wording in `vars()`, `aiPrompt()` and the weaving line, while the preset's scenery, friends and
+  objects stay put, so a story about "Grandma's Garden" still has a real world behind it. The villain
+  question became a two-state sliding pill — *No villain* / *Add a villain who turns good* — with a
+  note underneath that explains the second state; the old checkbox still exists, visually hidden and
+  `aria-hidden`, so the wizard state never forks.
+- **Chapter headers say how to read them.** Colour alone was doing all the work; each chapter now
+  carries a tinted label in plain words — *✨ Read this softly*, *🌤 Read this with a smile*,
+  *⭐ Steady and clear*, *🚀 Read this with high energy!* — above the existing italic hint line.
+- **Golden words are now full-size targets.** A transparent `::after` extends every word to at least
+  44 × 44 px (`inset: -11px -9px`, wider on `pointer: coarse`) without moving the curly border, so
+  one-handed tapping in a dim room stops missing.
+- **One install nudge, and only for people who came back.** `storiesai.installPrompt.v1` counts
+  visits: the banner never appears on a first visit, waits nine seconds on the night sky of a return
+  visit, never shows when the app is already standalone, never stacks on top of the cookie card, and
+  goes quiet for thirty days after a dismissal. Where Chrome supplies `beforeinstallprompt` the button
+  reads *Install now* and calls it; on iOS, where it never fires, the same button reads *Got it* and
+  the copy tells you to use the share sheet. It sits on `env(safe-area-inset-bottom)` so it clears a
+  phone's gesture bar.
+
 ### The world dial (story settings)
 
 Every story setting owns a world, and the builder shows it to you: tapping a place in
