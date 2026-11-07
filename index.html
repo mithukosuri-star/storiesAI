@@ -1768,6 +1768,42 @@ window.CWorld = (function () {
   var W = 1, H = 1, dpr = 1, raf = null, paused = false;
   var progs = {}, bufs = {}, sky = null, quad = null;
   var moodTint = [0.55, 0.45, 0.95], flash = 0, nextFlash = 6;
+
+  /* ---- re-dressing the world -------------------------------------------
+     Every story setting owns a sky palette and a horizon. Tapping one in the
+     builder eases the live sky towards it (`setScene`); nothing is rebuilt and
+     no extra draw call is made — the transition is a handful of uniforms, so
+     the phone budget does not move. ------------------------------------- */
+  var SKY_BASE = {
+    top: [0.015, 0.012, 0.055], bot: [0.065, 0.045, 0.175], acc: null,
+    hillA: [0.035, 0.022, 0.014], hillF: [3.1, 7.3, 13.7], hillP: [0.0, 1.2, 2.4],
+    base: -0.020, teeth: [0.0, 7.0], ground: [0.020, 0.017, 0.052], name: ''
+  };
+  var HORIZONS = {
+    forest:   { a: [0.058, 0.050, 0.030], f: [5.3, 11.7, 21.9], p: [0.0, 1.7, 4.1], base: -0.032, teeth: [0.30, 9.0], ground: [0.012, 0.026, 0.021] },
+    castle:   { a: [0.030, 0.026, 0.012], f: [2.3, 5.1, 9.7],   p: [0.6, 2.2, 3.4], base: -0.030, teeth: [1.00, 6.0], ground: [0.020, 0.017, 0.040] },
+    city:     { a: [0.020, 0.013, 0.008], f: [2.9, 6.7, 12.9],  p: [0.3, 1.1, 2.9], base: -0.028, teeth: [1.35, 10.0], ground: [0.023, 0.019, 0.041] },
+    mountain: { a: [0.078, 0.036, 0.016], f: [1.7, 4.3, 8.9],   p: [0.0, 0.9, 2.1], base: -0.030, teeth: [0.0, 7.0], ground: [0.018, 0.020, 0.048] },
+    sea:      { a: [0.006, 0.003, 0.002], f: [2.1, 5.3, 9.1],   p: [0.0, 1.4, 2.6], base: -0.011, teeth: [0.0, 7.0], ground: [0.010, 0.028, 0.044] },
+    farm:     { a: [0.026, 0.018, 0.010], f: [2.2, 4.9, 9.4],   p: [0.2, 1.6, 3.1], base: -0.028, teeth: [0.0, 7.0], ground: [0.026, 0.020, 0.030] },
+    space:    { a: [0.000, 0.000, 0.000], f: [1.7, 3.1, 5.3],   p: [0.0, 0.0, 0.0], base: -2.000, teeth: [0.0, 7.0], ground: [0.014, 0.012, 0.040] }
+  };
+  HORIZONS.island = { a: [0.010, 0.005, 0.003], f: [2.4, 5.9, 11.3], p: [0.8, 2.1, 3.9], base: -0.012, teeth: [0.0, 7.0], ground: [0.011, 0.026, 0.040] };
+  HORIZONS.glacier = { a: [0.070, 0.034, 0.020], f: [1.9, 5.1, 10.3], p: [0.4, 1.3, 2.7], base: -0.030, teeth: [0.0, 7.0], ground: [0.020, 0.026, 0.052] };
+
+  function hexRGB(h) {
+    h = String(h || '#ffffff').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    if (!isFinite(n)) n = 0xffffff;
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  }
+  function skyCopy(o) {
+    return { top: o.top.slice(), bot: o.bot.slice(), acc: o.acc ? o.acc.slice() : null,
+      hillA: o.hillA.slice(), hillF: o.hillF.slice(), hillP: o.hillP.slice(),
+      base: o.base, teeth: o.teeth.slice(), ground: o.ground.slice(), name: o.name || '' };
+  }
+  var skyNow = skyCopy(SKY_BASE), skyGoal = skyCopy(SKY_BASE), worldName = '';
   var LOW = false;   /* lighter particle budget on phones / weak GPUs */
   var reason = '', rendererName = '', lastNow = 0, fps = 0, ftSum = 0, ftN = 0, quality = 0, slowStreak = 0;
 
@@ -2240,6 +2276,10 @@ window.CWorld = (function () {
     add('varying vec2 vP;');
     add('uniform vec2 uRes; uniform float uTime; uniform vec3 uFwd,uRight,uUp; uniform float uTanHalf,uAspect;');
     add('uniform vec3 uTop,uBot,uHor,uAcc,uMoon; uniform float uFlash; uniform vec2 uRes2;');
+    /* the horizon belongs to the story setting: three sine harmonics, a blocky
+       term for crenellations and city roofs, and the ground tint. All of it is
+       uniform state, so re-dressing the world costs no extra shader work. */
+    add('uniform vec3 uHillA,uHillF,uHillP,uGroundCol; uniform float uHillBase; uniform vec2 uTeeth;');
     add('float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }');
     add('float noise(vec2 p){ vec2 i=floor(p),f=fract(p); vec2 u=f*f*(3.0-2.0*f);');
     add('  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }');
@@ -2264,9 +2304,10 @@ window.CWorld = (function () {
     add('  float st = step(0.9975, hash(floor(sc)));');
     add('  float tw = 0.55+0.45*sin(uTime*2.0 + hash(floor(sc))*40.0);');
     add('  col += vec3(st*tw*0.85) * smoothstep(0.04,0.5,h);');
-    add('  float hz = -0.02 + 0.035*sin(ang*3.1) + 0.022*sin(ang*7.3+1.2) + 0.014*sin(ang*13.7+2.4);');
+    add('  float hz = uHillBase + uHillA.x*sin(ang*uHillF.x+uHillP.x) + uHillA.y*sin(ang*uHillF.y+uHillP.y) + uHillA.z*sin(ang*uHillF.z+uHillP.z);');
+    add('  hz += uTeeth.x * 0.026 * step(0.5, fract(ang*uTeeth.y));');
     add('  float ground = 1.0 - smoothstep(hz-0.012, hz+0.012, h);');
-    add('  vec3 g = vec3(0.020,0.017,0.052) + uHor*0.05;');
+    add('  vec3 g = uGroundCol + uHor*0.05;');
     add('  col = mix(col, g, ground);');
     add('  col += vec3(0.55,0.6,1.0) * uFlash * 0.35 * (1.0-ground);');
     /* the moon: measured as an angular distance, never as a huge power */
@@ -2310,7 +2351,8 @@ window.CWorld = (function () {
     ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha', 'uSizeMax',
       'uBookPos', 'uBookRight', 'uBookUp', 'uBookZ', 'uBookScale', 'uAssemble', 'uTurn'
     ].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
-    ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uRes2'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
+    ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uRes2',
+      'uHillA', 'uHillF', 'uHillP', 'uHillBase', 'uTeeth', 'uGroundCol'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     attribs.forEach(function (n) { o.a[n] = gl.getAttribLocation(p, n); });
     return o;
   }
@@ -2396,6 +2438,30 @@ window.CWorld = (function () {
     var step = Math.min(3, Math.max(.4, (now - lastNow) / 16.67));   /* frames elapsed */
     prog += (progT - prog) * Math.min(1, 0.075 * step);
 
+    /* ease the palette + horizon towards the selected world (~1 s) */
+    (function () {
+      var k = Math.min(1, 0.085 * step), i;
+      var cols = ['top', 'bot', 'hillA', 'hillF', 'hillP', 'ground'];
+      for (var c = 0; c < cols.length; c++) {
+        var a = skyNow[cols[c]], b2 = skyGoal[cols[c]];
+        a[0] += (b2[0] - a[0]) * k; a[1] += (b2[1] - a[1]) * k; a[2] += (b2[2] - a[2]) * k;
+      }
+      skyNow.base += (skyGoal.base - skyNow.base) * k;
+      for (i = 0; i < 2; i++) skyNow.teeth[i] += (skyGoal.teeth[i] - skyNow.teeth[i]) * k;
+      if (skyGoal.acc) {
+        if (!skyNow.acc) skyNow.acc = moodTint.slice();
+        for (i = 0; i < 3; i++) skyNow.acc[i] += (skyGoal.acc[i] - skyNow.acc[i]) * k;
+      } else if (skyNow.acc) {
+        var settled = true;
+        for (i = 0; i < 3; i++) {
+          skyNow.acc[i] += (moodTint[i] - skyNow.acc[i]) * k;
+          if (Math.abs(skyNow.acc[i] - moodTint[i]) > 0.005) settled = false;
+        }
+        if (settled) skyNow.acc = null;
+      }
+      skyNow.name = skyGoal.name;
+    })();
+
     /* adaptive quality: a phone that cannot hold the flight gets a smaller
        render target first, and then the cheaper 2D sky */
     if (lastNow) {
@@ -2448,10 +2514,19 @@ window.CWorld = (function () {
     gl.uniform1f(sky.u.uTime, time);
     gl.uniform3fv(sky.u.uFwd, fwd); gl.uniform3fv(sky.u.uRight, right); gl.uniform3fv(sky.u.uUp, up);
     gl.uniform1f(sky.u.uTanHalf, Math.tan(fov / 2)); gl.uniform1f(sky.u.uAspect, W / Math.max(1, H));
-    gl.uniform3f(sky.u.uTop, 0.015, 0.012, 0.055);
-    gl.uniform3f(sky.u.uBot, 0.065, 0.045, 0.175);
-    gl.uniform3f(sky.u.uHor, moodTint[0] * .30, moodTint[1] * .24, moodTint[2] * .46);
-    gl.uniform3f(sky.u.uAcc, moodTint[0], moodTint[1], moodTint[2]);
+    var skAcc = skyNow.acc || moodTint;
+    gl.uniform3f(sky.u.uTop, skyNow.top[0], skyNow.top[1], skyNow.top[2]);
+    gl.uniform3f(sky.u.uBot, skyNow.bot[0], skyNow.bot[1], skyNow.bot[2]);
+    gl.uniform3f(sky.u.uHor, skAcc[0] * .30, skAcc[1] * .27, skAcc[2] * .42);
+    gl.uniform3f(sky.u.uAcc, skAcc[0], skAcc[1], skAcc[2]);
+    if (sky.u.uHillA) {
+      gl.uniform3f(sky.u.uHillA, skyNow.hillA[0], skyNow.hillA[1], skyNow.hillA[2]);
+      gl.uniform3f(sky.u.uHillF, skyNow.hillF[0], skyNow.hillF[1], skyNow.hillF[2]);
+      gl.uniform3f(sky.u.uHillP, skyNow.hillP[0], skyNow.hillP[1], skyNow.hillP[2]);
+      gl.uniform1f(sky.u.uHillBase, skyNow.base);
+      gl.uniform2f(sky.u.uTeeth, skyNow.teeth[0], skyNow.teeth[1]);
+      gl.uniform3f(sky.u.uGroundCol, skyNow.ground[0], skyNow.ground[1], skyNow.ground[2]);
+    }
     gl.uniform1f(sky.u.uFlash, flash);
     gl.uniform2f(sky.u.uRes2, W, H);
     var md = norm([-0.34, 0.40, -0.86]);
@@ -2618,7 +2693,7 @@ window.CWorld = (function () {
     return {
       up: !!ok && !dead, dead: dead, reason: reason,
       fps: fps, quality: quality, points: Math.round(S.length / 3), low: LOW, cap: LOW ? 30 : 60,
-      book: book ? book.count : 0,
+      book: book ? book.count : 0, world: worldName,
       dpr: Math.round(dpr * 100) / 100, renderer: rendererName
     };
   }
@@ -2636,6 +2711,23 @@ window.CWorld = (function () {
     count: function () { return S.length; },
     stop: function (why) { handOver(why || 'stopped'); },
     turn: function () { return Math.max(0, Math.min(1, prog / 0.055)); },
+    /* re-dress the sky for a story setting: {sky:[top,bottom], accent, scene} */
+    setScene: function (setting) {
+      if (!setting) { skyGoal = skyCopy(SKY_BASE); worldName = ''; return ''; }
+      var hz = HORIZONS[setting.scene] || HORIZONS.forest;
+      var t = hexRGB(setting.sky && setting.sky[0]), b = hexRGB(setting.sky && setting.sky[1]), a = hexRGB(setting.accent);
+      skyGoal = {
+        top: [t[0] * 0.55, t[1] * 0.55, t[2] * 0.55],
+        bot: [b[0] * 0.82, b[1] * 0.82, b[2] * 0.82],
+        acc: [a[0] * 0.95, a[1] * 0.95, a[2] * 0.95],
+        hillA: hz.a.slice(), hillF: hz.f.slice(), hillP: hz.p.slice(),
+        base: hz.base, teeth: hz.teeth.slice(), ground: hz.ground.slice(),
+        name: setting.id || ''
+      };
+      worldName = skyGoal.name;
+      return worldName;
+    },
+    world: function () { return worldName; },
     info: info
   };
 })();
@@ -3031,8 +3123,99 @@ window.CCursor = (function () {
     document.body.classList.add('themed');
   }
   function clearTheme() {
+    if (themeRAF) { cancelAnimationFrame(themeRAF); themeRAF = 0; }
+    themeCur = null;
     ['--sky-top', '--sky-bottom', '--accent', '--gold', '--gold-2', '--gold-deep'].forEach(function (p) { document.documentElement.style.removeProperty(p); });
     document.body.classList.remove('themed');
+  }
+
+  /* ---------------- the builder re-dresses the night ----------------
+     Tapping a setting turns the page's palette and the live sky towards that
+     world, so the place you pick is the place you see while you pick it. */
+  var THEME_BASE = { top: '#05040f', bottom: '#0f0f23', accent: '#f3d38a', gold: '#f3d38a', gold2: '#f5c842', deep: '#0f0f23' };
+  var themeCur = null, themeRAF = 0;
+  function calmMotion() {
+    try {
+      return !document.documentElement.classList.contains('force-motion') &&
+        !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) { return false; }
+  }
+  function hex2rgb(h) {
+    h = String(h || '#000000').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    if (!isFinite(n)) n = 0;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function themeBase() {
+    themeCur = themeCur || {};
+    ['top', 'bottom', 'accent', 'gold', 'gold2', 'deep'].forEach(function (k) { themeCur[k] = hex2rgb(THEME_BASE[k]); });
+    return themeCur;
+  }
+  function themePaint() {
+    var t = themeCur, r = document.documentElement.style;
+    var css = function (v) { return 'rgb(' + Math.round(v[0]) + ',' + Math.round(v[1]) + ',' + Math.round(v[2]) + ')'; };
+    r.setProperty('--sky-top', css(t.top));
+    r.setProperty('--sky-bottom', css(t.bottom));
+    r.setProperty('--accent', css(t.accent));
+    r.setProperty('--gold', css(t.gold));
+    r.setProperty('--gold-2', css(t.gold2));
+    r.setProperty('--gold-deep', css(t.deep));
+  }
+  function themeTo(target, ms, thenUntheme) {
+    var from = themeNow(), keys = ['top', 'bottom', 'accent', 'gold', 'gold2', 'deep'];
+    var start = {}, tgt = {};
+    keys.forEach(function (k) {
+      start[k] = from[k].slice();
+      tgt[k] = (thenUntheme ? hex2rgb(THEME_BASE[k]) : target[k]) || from[k];
+    });
+    if (themeRAF) { cancelAnimationFrame(themeRAF); themeRAF = 0; }
+    if (!ms || calmMotion()) {
+      themeCur = {}; keys.forEach(function (k) { themeCur[k] = tgt[k]; });
+      if (thenUntheme) clearTheme(); else { document.body.classList.add('themed'); themePaint(); }
+      return;
+    }
+    document.body.classList.add('themed');
+    var t0 = 0;
+    function tick(ts) {
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      themeCur = {};
+      keys.forEach(function (key) {
+        themeCur[key] = [0, 1, 2].map(function (i) { return start[key][i] + (tgt[key][i] - start[key][i]) * e; });
+      });
+      themePaint();
+      if (k < 1) themeRAF = requestAnimationFrame(tick);
+      else { themeRAF = 0; if (thenUntheme) clearTheme(); }
+    }
+    themeRAF = requestAnimationFrame(tick);
+  }
+  function themeNow() {
+    if (themeCur && themeCur.top) return themeCur;
+    var cs = getComputedStyle(document.documentElement);
+    var read = function (name, fallback) {
+      var v = (cs.getPropertyValue(name) || '').trim();
+      if (v.charAt(0) === '#') return hex2rgb(v);
+      var m = v.match(/(\d+)\D+(\d+)\D+(\d+)/);
+      return m ? [+m[1], +m[2], +m[3]] : hex2rgb(fallback);
+    };
+    themeCur = {
+      top: read('--sky-top', THEME_BASE.top), bottom: read('--sky-bottom', THEME_BASE.bottom),
+      accent: read('--accent', THEME_BASE.accent), gold: read('--gold', THEME_BASE.gold),
+      gold2: read('--gold-2', THEME_BASE.gold2), deep: read('--gold-deep', THEME_BASE.deep)
+    };
+    return themeCur;
+  }
+  /* id = a setting id, or null to go back to the plain night sky */
+  function previewSetting(id) {
+    var s = id ? findSetting(id) : null;
+    if (window.CWorld && window.CWorld.setScene) window.CWorld.setScene(s);
+    if (!s) { themeTo(null, 620, true); return; }
+    var m = findMood(S.wizard.mood);
+    themeTo({
+      top: hex2rgb(s.sky[0]), bottom: hex2rgb(s.sky[1]), accent: hex2rgb(s.accent),
+      gold: hex2rgb(m.glow), gold2: hex2rgb(s.accent), deep: hex2rgb(s.sky[1])
+    }, 620);
   }
 
   /* ---------------- home content ---------------- */
@@ -3180,6 +3363,9 @@ window.CCursor = (function () {
         S.wizard[b.dataset.group] = b.dataset.id;
         if (b.dataset.group === 'language') S.settings.language = b.dataset.id;
         if (b.dataset.group === 'mood') { A.setSound(true); syncSound(); A.previewMood(b.dataset.id); }
+        if (b.dataset.group === 'setting' || b.dataset.group === 'mood') {
+          if ($('#view-create') && $('#view-create').classList.contains('active')) previewSetting(S.wizard.setting);
+        }
         save(); renderWizard();
       });
     });
@@ -3539,6 +3725,7 @@ window.CCursor = (function () {
         'fps ' + (w.fps || '–') + ' · dpr ' + (w.dpr || '–') + ' · points ' + (w.points || 0) + ' · quality ' + (w.quality || 0),
         'shader ' + (w.low ? 'phone (2 octaves)' : 'full (5 octaves)') + ' · cap ' + (w.cap || 60) + 'fps',
         'book ' + (w.book || 0) + ' points · turn ' + (window.CWorld && window.CWorld.turn ? window.CWorld.turn().toFixed(2) : '–'),
+        'world: ' + (w.world || 'plain night') + ' · horizon + palette lerp',
         '2d sky: ' + (st.running ? 'running · ' + st.count + ' stars · mode ' + st.mode : 'off'),
         'reduced-motion ' + mq('(prefers-reduced-motion: reduce)') + ' · motion override ' + (document.documentElement.classList.contains('force-motion') ? 'yes' : 'no'),
         'view ' + window.innerWidth + '×' + window.innerHeight + ' · scroll ' + Math.round(window.scrollY || 0),
@@ -3648,13 +3835,14 @@ window.CCursor = (function () {
     var el = $('#view-' + name);
     if (el) el.classList.add('active');
     if (name !== 'story') { clearTheme(); A.stopMusic(); A.stopSpeak(); reading = false; }
+    if (name !== 'create' && name !== 'story' && window.CWorld && window.CWorld.setScene) window.CWorld.setScene(null);
     document.body.classList.toggle('app-view', name !== 'home');
     if (name === 'home') {
       $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
       if (window.__sceneUpdate) setTimeout(window.__sceneUpdate, 60);
     }
     if (name === 'library') renderLibrary();
-    if (name === 'create') { renderWizard(); }
+    if (name === 'create') { renderWizard(); previewSetting(S.wizard.setting); }
     if (name === 'story' && currentStory) renderStory(currentStory);
   }
   function route() {
