@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>storiesAI — a bedtime fairy tale</title>
+<meta name="description" content="Personalized bedtime stories for children, written tonight for the one you love. A fairy tale never read before.">
+<meta name="theme-color" content="#05040f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="storiesAI">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2305040f'/%3E%3Cpath d='M32 10 L35 27 L52 32 L35 37 L32 54 L29 37 L12 32 L29 27 Z' fill='%23f3d38a'/%3E%3C/svg%3E">
+<meta property="og:title" content="storiesAI — a bedtime fairy tale">
+<meta property="og:description" content="A fairy tale never read before, written tonight for the one you love.">
+<style>{{FONTS}}
+{{STYLES}}</style>
+</head>
+<body class="asleep">
+<canvas id="world" aria-hidden="true"></canvas>
+<canvas id="starfield" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ fixed cinematic chrome ============ -->
+<div id="chrome">
+  <header class="topbar">
+    <a class="wordmark" href="#/home" aria-label="storiesAI home">stories<span>AI</span></a>
+    <nav class="top-right">
+      <button class="text-link" id="signInBtn">SIGN IN</button>
+      <a class="btn-outline" href="#/create">CREATE A STORY</a>
+      <button class="btn-outline ghost" id="installBtn" style="display:none">INSTALL</button>
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button>
+    </nav>
+  </header>
+
+  <div class="rail" id="rail">
+    <button class="rail-end top" id="daynightBtn" title="Awake / Asleep">AWAKE</button>
+    <div class="rail-line"><i class="rail-dot" id="railDot"></i></div>
+    <span class="rail-end bottom">ASLEEP</span>
+    <div class="rail-chapter" id="railChapter"><b>II</b> <em>The journey</em></div>
+    <ul class="rail-links">
+      <li><a href="#" data-scene="1">II&nbsp;&nbsp; The journey</a></li>
+      <li><a href="#" data-scene="4">III&nbsp; The music</a></li>
+      <li><a href="#" data-scene="5">IV&nbsp;&nbsp; The sounds</a></li>
+      <li><a href="#" data-scene="6">V&nbsp;&nbsp;&nbsp; The voice</a></li>
+      <li><a href="#" data-scene="7">VI&nbsp;&nbsp; The ages</a></li>
+      <li><a href="#" data-scene="9">VII&nbsp; Goodnight</a></li>
+      <li><a href="#" data-scene="11">VIII The end</a></li>
+    </ul>
+  </div>
+
+  <div class="corner chapter-label" id="chapterLabel">I · PROLOGUE</div>
+  <div class="scroll-cue" id="scrollCue"><span>SCROLL TO ENTER</span><i class="cue-line"></i></div>
+  <button class="corner sound-fixed" id="soundBtn"><span class="dots"><i></i><i></i><i></i><i></i></span><span id="soundLabel">SOUND</span></button>
+</div>
+
+<main>
+<!-- ======================= HOME / THE JOURNEY ======================= -->
+<section class="view active" id="view-home">
+  <div class="scenes" id="scenes">
+
+    <!-- I · prologue -->
+    <section class="scene hero" data-chapter="I · PROLOGUE" data-name="Prologue" data-mode="0">
+      <div class="scene-inner">
+        <p class="kicker">STORIESAI &nbsp;·&nbsp; A BEDTIME FAIRY TALE</p>
+        <h1 class="script-huge">No one has ever told it…</h1>
+        <span class="hero-rule" aria-hidden="true"></span>
+        <div class="hero-preview">
+          <span class="hp-kicker">CLICK A GOLDEN WORD — NO ACCOUNT NEEDED</span>
+          <p>The gentle <button type="button" class="sound-word word-wind" data-sfx="wind" title="Tap to hear the rustle of leaves" aria-label="Hear the rustle of leaves">wind</button> blew through the trees, and somewhere far away, <button type="button" class="sound-word word-magic" data-sfx="bells" title="Tap to hear little golden bells" aria-label="Hear little golden bells">bells</button> answered.</p>
+        </div>
+        <button class="pill-outline listen" id="heroSound"><span class="dots"><i></i><i></i><i></i><i></i></span><span id="heroSoundLabel">LISTEN WITH SOUND</span></button>
+      </div>
+    </section>
+
+    <!-- II · the journey -->
+    <section class="scene" data-chapter="II · THE JOURNEY" data-name="The journey" data-mode="1">
+      <div class="scene-inner">
+        <p class="eyebrow">PROLOGUE &nbsp;·&nbsp; YOU ARE HERE</p>
+        <h2 class="display">Personalized bedtime<br><em>stories for children</em></h2>
+        <p class="big-line">A fairy tale <span class="gold-script">never read before</span>,<br>written tonight for <span class="gold-script">the one you love</span>.</p>
+        <p class="quiet">Close your eyes… we're about to step into the fairy tale.</p>
+      </div>
+    </section>
+
+    <section class="scene" data-chapter="II · THE JOURNEY" data-name="The journey" data-mode="2">
+      <div class="scene-inner wide">
+        <h2 class="spread-head">A STORY MADE TO MEASURE</h2>
+        <p class="display-sub">name, age, value, place and <span class="gold-script">a little villain</span></p>
+        <div class="mini-features" id="featureCards"></div>
+      </div>
+    </section>
+
+    <section class="scene statement" data-chapter="II · THE JOURNEY" data-name="The journey" data-mode="3">
+      <div class="scene-inner">
+        <h2 class="display huge">And a <span class="gold-script">little villain</span>.</h2>
+        <p class="quiet">If you like, one who turns good in the end.</p>
+      </div>
+    </section>
+
+    <!-- III · the music -->
+    <section class="scene" data-chapter="III · THE MUSIC" data-name="The music" data-mode="4">
+      <div class="scene-inner wide">
+        <h2 class="spread-head">EVERY STORY HAS <span class="gold-script">ITS OWN MUSIC</span></h2>
+        <p class="display-sub">Gentle · Adventurous · Magical · Relaxing — tap one and listen.</p>
+        <div class="pill-row" id="musicChips"></div>
+        <p class="quiet small">Every note is made live on your device. The music follows the mood you choose.</p>
+      </div>
+    </section>
+
+    <!-- IV · the sounds -->
+    <section class="scene" data-chapter="IV · THE SOUNDS" data-name="The sounds" data-mode="5">
+      <div class="scene-inner wide">
+        <h2 class="display">Words that<br><span class="gold-script">come to life</span></h2>
+        <span class="pill-outline static">TAP THE GOLDEN WORDS AND LISTEN</span>
+        <div class="sound-demo" id="soundDemo"></div>
+      </div>
+    </section>
+
+    <!-- V · the voice -->
+    <section class="scene" data-chapter="V · THE VOICE" data-name="The voice" data-mode="6">
+      <div class="scene-inner wide">
+        <h2 class="display">Become a storyteller.<br><span class="gold-script">No acting lessons needed.</span></h2>
+        <p class="quiet">Every chapter has a colour that tells you which voice to read it in.</p>
+        <div class="voice-row" id="voiceGrid"></div>
+      </div>
+    </section>
+
+    <!-- VI · the ages -->
+    <section class="scene" data-chapter="VI · THE AGES" data-name="The ages" data-mode="7">
+      <div class="scene-inner wide">
+        <h2 class="spread-head">EVERY AGE HAS <span class="gold-script">ITS OWN STORY</span></h2>
+        <p class="display-sub">From 0 to 10, in five age groups: each one speaks its own language. Tap one.</p>
+        <div class="pill-row" id="ageChips"></div>
+      </div>
+    </section>
+
+    <section class="scene" data-chapter="VI · THE AGES" data-name="The ages" data-mode="7">
+      <div class="scene-inner wide">
+        <div class="counter"><span id="storyCounter">1,767</span><p>stories created by a community of parents</p></div>
+        <p class="eyebrow">WHAT PARENTS SAY</p>
+        <div class="review-track" id="reviewTrack"></div>
+        <div class="review-nav"><button class="circle-btn" id="revPrev" aria-label="Previous">←</button><button class="circle-btn" id="revNext" aria-label="Next">→</button></div>
+      </div>
+    </section>
+
+    <!-- VII · goodnight -->
+    <section class="scene" data-chapter="VII · GOODNIGHT" data-name="Goodnight" data-mode="8">
+      <div class="scene-inner wide">
+        <h2 class="display">Completely free edition. <span class="gold-script">No credit cards,<br>no subscriptions.</span></h2>
+        <p class="quiet">Just 3 free story stars gifted to you instantly — and extra stars are always free here too.</p>
+        <div class="pack-row" id="starPacks"></div>
+        <a class="pill-gold" href="#/create">CREATE YOUR STORY FOR FREE</a>
+      </div>
+    </section>
+
+    <section class="scene" data-chapter="VII · GOODNIGHT" data-name="Goodnight" data-mode="1">
+      <div class="scene-inner wide">
+        <p class="eyebrow">HOW IT WORKS</p>
+        <h2 class="display">How a storiesAI story <span class="gold-script">is born</span></h2>
+        <div class="how-grid">
+          <div class="how-item"><b>A story made to measure</b><p>Choose the hero's name, age, a value, a setting, a mood and the length. Add a little villain who makes amends, if you like.</p></div>
+          <div class="how-item"><b>Music and interactive sounds</b><p>Background music matched to the mood. Golden words you can tap: wind, a distant storm, small bells — the music softens on its own.</p></div>
+          <div class="how-item"><b>Voice guidance</b><p>Each chapter suggests a way to read it: calm, cheerful, clear or quick. Even someone who has never read aloud becomes a storyteller.</p></div>
+          <div class="how-item"><b>Five age groups</b><p>From lulling sound words for the smallest to real metaphors and small ethical dilemmas for the older ones.</p></div>
+          <div class="how-item"><b>Let's talk about it</b><p>Three questions below the story to ask out loud before turning off the light.</p></div>
+          <div class="how-item"><b>Safe, and yours alone</b><p>No violence, nothing scary. Made on your device, kept in your library, works with the internet off.</p></div>
+        </div>
+        <div class="faq" id="faqList"></div>
+      </div>
+    </section>
+
+    <!-- VIII · the end -->
+    <section class="scene end" data-chapter="VIII · THE END" data-name="The end" data-mode="0">
+      <div class="scene-inner">
+        <p class="eyebrow">HAPPILY EVER AFTER</p>
+        <h2 class="display">This very night,<br><span class="gold-script">their story</span> awaits you.</h2>
+        <p class="quiet">The bedtime ritual becomes shared magic. Ready in thirty seconds, remembered forever.</p>
+        <a class="pill-gold" href="#/create">CREATE YOUR FIRST STORY</a>
+        <p class="foot-note">Free, nothing to pay · Installable · Works offline · Stories in English, Hindi & Bengali</p>
+      </div>
+    </section>
+  </div>
+
+  <footer class="site">
+    <div class="foot-inner">
+      <a class="wordmark small" href="#/home">stories<span>AI</span></a>
+      <div class="foot-links">
+        <a href="#/create">Create a story</a>
+        <a href="#/library">Library</a>
+        <a href="#" data-scene="10">FAQ</a>
+        <button id="installFooter">Install app</button>
+        <button id="settingsBtn">Settings</button>
+        <button id="settingsFooter">Storyteller & AI</button>
+        <button id="cookiePrefs">Cookie preferences</button>
+      </div>
+      <p class="foot-note">storiesAI is an independent installable PWA inspired by the idea of personalized bedtime stories. All stories are generated on your device. Original copy and artwork; no content from any other site is reproduced.</p>
+    </div>
+  </footer>
+</section>
+
+<!-- ======================= CREATE ======================= -->
+<section class="view" id="view-create">
+  <div class="page">
+    <a class="back-link" href="#/home">← Back to the night sky</a>
+    <div class="page-head"><p class="eyebrow">THE STORYTELLER'S DESK</p><h2 class="display">Let's make <span class="gold-script">tonight's tale</span></h2><p class="quiet">Six little choices. About thirty seconds. One story never told before.</p></div>
+    <div class="wizard-shell">
+      <div class="wizard">
+        <div class="progress" id="wizProgress"></div>
+        <div class="step active" data-step="0">
+          <div class="roman">I · THE HERO</div>
+          <h3 class="display-sm">What is <span class="gold-script">their name?</span></h3>
+          <p class="quiet">More than one hero? Separate names with a comma or “and” — they will all be in the story.</p>
+          <div class="field"><label>NAME(S)</label><input class="input" id="namesInput" placeholder="e.g. Riya and Kabir" autocomplete="off"></div>
+          <div class="field"><label>WHAT SHALL WE WRITE?</label><div class="choice-grid" id="choiceType" style="grid-template-columns:repeat(2,1fr)"></div></div>
+        </div>
+        <div class="step" data-step="1">
+          <div class="roman">II · AGE AND LENGTH</div>
+          <h3 class="display-sm">Every age has <span class="gold-script">its own voice</span></h3>
+          <p class="quiet">This changes the sentences, the rhythm and the kind of problem in the story.</p>
+          <div class="field"><label>AGE GROUP</label><div class="choice-grid" id="choiceAge"></div></div>
+          <div class="field"><label>HOW LONG IS BEDTIME TONIGHT?</label><div class="choice-grid" id="choiceLength" style="grid-template-columns:repeat(3,1fr)"></div></div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="roman">III · THE VALUE</div>
+          <h3 class="display-sm">One small <span class="gold-script">value</span></h3>
+          <p class="quiet">Never a lecture — just a quiet thing the story shows instead of telling.</p>
+          <div class="choice-grid" id="choiceValue"></div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="roman">IV · THE PLACE</div>
+          <h3 class="display-sm">Choose a <span class="gold-script">place</span></h3>
+          <p class="quiet">The reader changes its colours to match the world you pick.</p>
+          <div class="choice-grid" id="choiceSetting"></div>
+        </div>
+        <div class="step" data-step="4">
+          <div class="roman">V · MOOD AND LANGUAGE</div>
+          <h3 class="display-sm">Set the <span class="gold-script">mood</span></h3>
+          <p class="quiet">Tap a mood to hear a few notes of its music.</p>
+          <div class="pill-row" id="wizMoods"></div>
+          <div class="field" style="margin-top:28px"><label>STORY LANGUAGE</label><div class="row-choices lang-pills" id="choiceLang"></div></div>
+          <div class="field">
+            <label>A HARMLESS LITTLE VILLAIN?</label>
+            <div class="villain-pill" data-on="0" role="group" aria-label="A harmless little villain">
+              <button type="button" class="vp-side" data-villain="0">❌ <span>No villain</span></button>
+              <button type="button" class="vp-side" data-villain="1">🦊 <span>Add a villain who turns good</span></button>
+              <input type="checkbox" id="villainToggle" class="sr-only" tabindex="-1" aria-hidden="true">
+            </div>
+            <p class="vp-note" id="villainNote">Only adventure and wonder — nobody to be afraid of.</p>
+          </div>
+          <div class="field"><label for="extrasInput">ANYTHING ELSE TO WEAVE IN? <span class="quiet">(OPTIONAL)</span></label><textarea class="input" id="extrasInput" placeholder="a blue teddy bear, Grandma's garden, a love of dinosaurs…"></textarea></div>
+        </div>
+        <div class="wiz-nav">
+          <button class="btn-outline" id="wizPrev">← BACK</button>
+          <button class="btn-outline" id="wizNext">NEXT →</button>
+          <button class="pill-gold" id="wizCreate" style="display:none">✦ WEAVE THIS STORY · 1 STAR</button>
+        </div>
+      </div>
+      <aside class="summary">
+        <h4>Tonight's ingredients</h4>
+        <dl id="summaryList"></dl>
+        <div class="stars-left"><b id="summaryStars">3</b> ✦ STARS IN YOUR POUCH<br><span class="quiet small">Each story uses one.</span></div>
+        <a class="btn-outline" href="#/library" style="width:100%;margin-top:20px;display:block;text-align:center">OPEN MY LIBRARY</a>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= GENERATING ======================= -->
+<section class="view" id="view-generating">
+  <div class="page gen">
+    <div class="moon-spin">✦</div>
+    <h2 class="display">Weaving <span class="gold-script">tonight's story</span>…</h2>
+    <div class="lines" id="genLine" role="status" aria-live="polite" aria-atomic="true">Gathering a little moonlight…</div>
+    <div class="bar" id="genBarWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="genBar"></i></div>
+    <p class="quiet small" id="genNote">Everything happens right here on your device.</p>
+  </div>
+</section>
+
+<!-- ======================= STORY ======================= -->
+<section class="view story-view" id="view-story">
+  <div class="page">
+    <a class="back-link" href="#/library">← Back to the library</a>
+    <div class="reader" id="reader"></div>
+  </div>
+</section>
+
+<!-- ======================= LIBRARY ======================= -->
+<section class="view" id="view-library">
+  <div class="page">
+    <a class="back-link" href="#/home">← Back to the night sky</a>
+    <div class="page-head"><p class="eyebrow">YOUR PERSONAL LIBRARY</p><h2 class="display">Every story, <span class="gold-script">kept safe</span></h2><p class="quiet">Saved on this device, ready even with the internet off.</p></div>
+    <div class="lib-top">
+      <div>
+        <div class="filter-row" id="libraryFilters"></div>
+        <div class="story-grid" id="libraryGrid"></div>
+      </div>
+      <aside>
+        <div class="wallet">
+          <p class="eyebrow">YOUR POUCH</p>
+          <div class="wallet-n"><span id="walletStars">3</span> ✦</div>
+          <p class="quiet small">One Star weaves one story. Stars are a gift in this edition.</p>
+          <button class="pill-gold" id="addStarsBtn">✦ ADD FREE STARS</button>
+          <hr>
+          <p class="quiet small">Invite a friend — share your code</p>
+          <div class="code"><span id="inviteCode">STORIESAI-…</span><button class="circle-btn" id="copyCode" title="Copy code">⧉</button></div>
+          <hr>
+          <button class="btn-outline" id="exportBtn" style="width:100%">⬇ EXPORT MY STORIES</button>
+          <button class="btn-outline" id="importBtn" style="width:100%;margin-top:8px">⬆ IMPORT A BACKUP</button>
+          <input type="file" id="importFile" accept="application/json,.json" class="sr-only">
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="cookie" id="cookieBanner" style="display:none">
+  <h4>A quick word about cookies</h4>
+  <p>We use technical storage, needed for the app to work, and, only if you accept, nothing else. storiesAI has no analytics and no tracking. You can change your mind at any time from “Cookie preferences” in the footer.</p>
+  <div class="cookie-actions"><button class="btn-outline" id="cookieReject">REJECT</button><button class="pill-gold" id="cookieAccept">ACCEPT</button></div>
+</div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="install-banner" id="installBanner" role="region" aria-label="Install storiesAI">
+  <span class="ib-star" aria-hidden="true">✦</span>
+  <div class="ib-body">
+    <h4>Read offline tonight</h4>
+    <p>Tap your browser’s <b>share / menu icon</b> and select <b>“Add to Home Screen”</b> to launch storiesAI like an app.</p>
+  </div>
+  <div class="ib-actions">
+    <button class="pill-gold" id="ibInstall" type="button">INSTALL</button>
+    <button class="ib-close" id="ibClose" type="button" aria-label="Not tonight">✕</button>
+  </div>
+</div>
+<div class="offline-badge">✦ OFFLINE MODE — STORIES STILL WORK</div>
+
+<script>{{SCRIPTS}}</script>
+</body>
+</html>

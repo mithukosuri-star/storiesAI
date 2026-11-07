@@ -905,6 +905,68 @@ window.CDATA = (function () {
     { id: 'farm',    emoji: '🌾', label: 'Cheerful Farm',     scene: 'farm',     sky: ['#1d2233','#5a4a3c'], accent: '#f6d28c', place: 'a farm where the hay smelled of biscuits', detail: 'a barn roof that collected falling stars', friend: 'a hen who counted sheep', thing: 'a little wooden cart with one loose wheel' }
   ];
 
+  /* ---------- environment profiles ----------------------------------------
+     Picking a place changes more than the sky tint: the horizon geometry and
+     the movement of the particle field change with it. `ground` overrides the
+     scene's horizon (three sine harmonics + a blocky tooth term), `motion`
+     drives the WebGL vertex shader, and the 2D fallback reads the same numbers
+     so a device without WebGL still gets the same weather.
+
+       drift   0..1  slow multi-directional, gravity-free float (space)
+       rise    units/s upward current (reef); wrapped inside `band`
+       sway    horizontal sine displacement in world units (reef current)
+       cluster 0..1  noise-thresholded horizontal puffs (cloud castle)
+       heightCap     soft ceiling above `floor` (forest canopy)
+       flight        camera Z-speed multiplier (cloud castle soars)
+       firefly 0..1  per-vertex abs(sin(uTime * aSeed)) blink (forest)
+       nebula  0..1  morphs the moon into a 3-octave FBM gas cloud (space)
+  ------------------------------------------------------------------------- */
+  const ENVIRONMENTS = {
+    cosmic: {
+      id: 'cosmic', label: 'Cosmic Drift', scene: 'space',
+      ground: { a: [0.000, 0.000, 0.000], f: [1.7, 3.1, 5.3], p: [0.0, 0.0, 0.0],
+                base: -2.000, teeth: [0.0, 0.0], ground: [0.014, 0.012, 0.040] },
+      motion: { drift: 1.00, rise: 0.00, sway: 0.00, cluster: 0.00, heightCap: 0.0,
+                flight: 0.86, firefly: 0.00, nebula: 1.00, band: 24.0, floor: -2.0 }
+    },
+    reef: {
+      id: 'reef', label: 'Bioluminescent Undersea', scene: 'sea',
+      ground: { a: [0.000, 0.000, 0.000], f: [1.0, 1.0, 1.0], p: [0.0, 0.0, 0.0],
+                base: -0.058, teeth: [0.0, 0.0], ground: [0.008, 0.046, 0.074] },
+      motion: { drift: 0.18, rise: 0.32, sway: 0.55, cluster: 0.00, heightCap: 0.0,
+                flight: 0.90, firefly: 0.00, nebula: 0.00, band: 20.0, floor: -2.4 }
+    },
+    mist: {
+      id: 'mist', label: 'Mist Flight', scene: 'castle',
+      ground: { a: [0.030, 0.026, 0.012], f: [2.3, 5.1, 9.7], p: [0.6, 2.2, 3.4],
+                base: -0.030, teeth: [1.0, 6.0], ground: [0.020, 0.017, 0.040] },
+      motion: { drift: 0.24, rise: 0.00, sway: 0.08, cluster: 0.72, heightCap: 0.0,
+                flight: 1.18, firefly: 0.00, nebula: 0.00, band: 24.0, floor: -2.0 }
+    },
+    firefly: {
+      id: 'firefly', label: 'Firefly Canopy', scene: 'forest',
+      ground: { a: [0.082, 0.056, 0.032], f: [13.0, 37.0, 79.0], p: [0.0, 1.7, 4.1],
+                base: -0.042, teeth: [0.85, 28.0], ground: [0.010, 0.030, 0.018] },
+      motion: { drift: 0.12, rise: 0.00, sway: 0.04, cluster: 0.00, heightCap: 7.0,
+                flight: 0.92, firefly: 0.90, nebula: 0.00, band: 24.0, floor: -2.5 }
+    },
+    default: {
+      id: 'default', label: 'Night Flight', scene: '',
+      ground: null,
+      motion: { drift: 0.00, rise: 0.00, sway: 0.00, cluster: 0.00, heightCap: 0.0,
+                flight: 1.00, firefly: 0.00, nebula: 0.00, band: 24.0, floor: -2.0 }
+    }
+  };
+
+  /* Which place wears which profile. Scenes without an explicit profile use
+     the plain night flight, so every existing story keeps its own horizon. */
+  const ENV_BY_SCENE = { space: 'cosmic', sea: 'reef', castle: 'mist', forest: 'firefly' };
+  const ENV_FOR_SETTING = {
+    space: 'cosmic', sea: 'reef', island: 'reef', ship: 'reef',
+    castle: 'mist', forest: 'firefly', park: 'firefly', treehouse: 'firefly'
+  };
+  SETTINGS.forEach(function (s) { s.env = ENV_FOR_SETTING[s.id] || ENV_BY_SCENE[s.scene] || 'default'; });
+
   const MOODS = [
     { id: 'gentle',      label: 'Gentle',      hint: 'soft melody',   glow: '#f0cf9a', chords: [261.63, 329.63, 392.00, 493.88], wave: 'sine',     pace: 5.2 },
     { id: 'adventurous', label: 'Adventurous', hint: 'epic rhythms',  glow: '#f5a97f', chords: [293.66, 349.23, 440.00, 587.33], wave: 'triangle', pace: 3.1 },
@@ -1172,6 +1234,7 @@ window.CDATA = (function () {
     AGES: AGES, VALUES: VALUES, SETTINGS: SETTINGS, MOODS: MOODS, LENGTHS: LENGTHS,
     LANGUAGES: LANGUAGES, VOICES: VOICES, SFX: SFX, SOUND_POOLS: SOUND_POOLS,
     BANKS: BANKS, BANKS_HI: BANKS_HI, BANKS_BN: BANKS_BN,
+    ENVIRONMENTS: ENVIRONMENTS, ENV_BY_SCENE: ENV_BY_SCENE, ENV_FOR_SETTING: ENV_FOR_SETTING,
     VALUE_TRANSLATIONS: VALUE_TRANSLATIONS, REVIEWS: REVIEWS, FAQ: FAQ
   };
 })();
@@ -1790,9 +1853,21 @@ window.CEngine = (function () {
 window.CStars = (function () {
   var cv, cx, W = 0, H = 0, dpr = 1, P = [], branches = [], mode = 0, awake = false, raf = null, t = 0, last = 0, inited = false;
   var sprites = {};
+  var env = null, reducedMQL = null;
   var GOLD = [243, 211, 138], CREAM = [246, 238, 223], BLUE = [160, 160, 192], VIOLET = [212, 197, 240];
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
+  function calmOn() {
+    try {
+      return !document.documentElement.classList.contains('force-motion') && !!(reducedMQL && reducedMQL.matches);
+    } catch (e) { return false; }
+  }
+  function profileFor(setting) {
+    if (!setting) return null;
+    var data = window.CDATA || {};
+    var id = setting.env || (data.ENV_BY_SCENE && data.ENV_BY_SCENE[setting.scene]) || 'default';
+    return data.ENVIRONMENTS ? (data.ENVIRONMENTS[id] || data.ENVIRONMENTS.default) : null;
+  }
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
@@ -1844,7 +1919,7 @@ window.CStars = (function () {
       });
     }
   }
-  function target(p, i, n) {
+  function baseTarget(p, i, n) {
     var cX = W * .5, cY = H * .5, R = Math.min(W, H) * .46;
     switch (mode) {
       case 1: /* slow nebula drift */
@@ -1880,13 +1955,46 @@ window.CStars = (function () {
                 p.by + Math.cos(t * .00028 + p.a) * 26];
     }
   }
+  /* Apply the same environment profile to the 2D fallback, so a device without
+     WebGL still gets cosmic drift, reef currents, cloud puffs and fireflies. */
+  function target(p, i, n) {
+    var q = baseTarget(p, i, n);
+    var m = env && env.motion;
+    if (!m) return q;
+    if (m.drift) {
+      q[0] += (Math.sin(t * .00023 + p.a) * 42 + Math.sin(t * .00011 + p.a * 2) * 18) * m.drift;
+      q[1] += Math.cos(t * .00019 + p.a * 1.7) * 34 * m.drift;
+    }
+    if (m.sway) q[0] += Math.sin(t * .0008 + p.seed * 6.283) * m.sway * 36;
+    if (m.rise) {
+      q[1] -= t * .0035 * (0.5 + p.seed) * m.rise;
+      q[1] = ((q[1] % H) + H) % H;              /* wrap from the bottom back up */
+    }
+    if (m.cluster) {
+      var cell = Math.max(52, W * .085);
+      if (p.seed < m.cluster) {                 /* noise threshold */
+        var gx = Math.round(q[0] / cell) * cell;
+        /* gather horizontally, then flatten towards one cloud height so the
+           fallback puffs read as wide clouds instead of tall columns */
+        var gy = H * (.24 + .38 * (0.5 + 0.5 * Math.sin(gx * .017 + p.a)));
+        q[0] += (gx - q[0]) * .68;
+        q[1] += (gy - q[1]) * .18;
+      }
+    }
+    if (m.heightCap) {
+      var floorY = H * .62;
+      if (q[1] < floorY) q[1] = floorY + (q[1] - floorY) * .35;
+    }
+    return q;
+  }
   function frame(ts) {
     raf = requestAnimationFrame(frame);
     try { draw(ts); } catch (e) { /* one bad frame must not stop the sky */ }
   }
 
   function draw(ts) {
-    var dt = Math.min(50, ts - last); last = ts; t += dt;
+    var dt = Math.min(50, ts - last); last = ts;
+    if (!calmOn()) t += dt;                     /* reduced motion holds the layout */
     cx.clearRect(0, 0, W, H);
     cx.globalCompositeOperation = 'lighter';
     var n = P.length;
@@ -1895,6 +2003,10 @@ window.CStars = (function () {
       p.px = p.x; p.py = p.y;
       p.x += (q[0] - p.x) * .045; p.y += (q[1] - p.y) * .045;
       var alpha = (awake ? .55 : .68) * (.22 + .78 * Math.abs(Math.sin(t * .0009 + p.tw)));
+      if (env && env.motion && env.motion.firefly) {
+        var blink = Math.abs(Math.sin(t * .001 * (0.35 + p.seed) + p.tw));
+        alpha *= (1 - env.motion.firefly) + env.motion.firefly * (0.16 + 0.84 * blink);
+      }
       if (p.bright) alpha = Math.min(1, alpha * 1.25);
       if (mode === 4 && p.bright) {
         cx.strokeStyle = 'rgba(' + p.c.join(',') + ',' + (alpha * .5) + ')';
@@ -1929,6 +2041,7 @@ window.CStars = (function () {
     if (inited) return;
     cv = document.getElementById('starfield'); if (!cv) return;
     cx = cv.getContext('2d'); if (!cx) return;
+    try { reducedMQL = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) {}
     inited = true;
     cv.style.display = 'block';
     resize(); make();
@@ -1949,8 +2062,11 @@ window.CStars = (function () {
     init: init,
     setMode: function (m) { mode = parseInt(m, 10) || 0; },
     setAwake: function (a) { awake = !!a; },
+    /* the same place profile that drives the WebGL world drives the 2D sky */
+    setScene: function (setting) { env = profileFor(setting); return env ? env.id : ''; },
+    scene: function () { return env ? env.id : ''; },
     mode: function () { return mode; },
-    info: function () { return { running: !!raf, count: P.length, mode: mode }; }
+    info: function () { return { running: !!raf, count: P.length, mode: mode, env: env ? env.id : '' }; }
   };
 })();
 
@@ -2003,7 +2119,58 @@ window.CWorld = (function () {
       hillA: o.hillA.slice(), hillF: o.hillF.slice(), hillP: o.hillP.slice(),
       base: o.base, teeth: o.teeth.slice(), ground: o.ground.slice(), name: o.name || '' };
   }
-  var skyNow = skyCopy(SKY_BASE), skyGoal = skyCopy(SKY_BASE), worldName = '';
+  function skyLerp(dst, a, b, t) {
+    var cols = ['top', 'bot', 'hillA', 'hillF', 'hillP', 'ground'], i, j;
+    for (i = 0; i < cols.length; i++) {
+      var d = dst[cols[i]], x = a[cols[i]], y = b[cols[i]];
+      for (j = 0; j < 3; j++) d[j] = x[j] + (y[j] - x[j]) * t;
+    }
+    dst.base += (b.base - a.base) * t;
+    for (i = 0; i < 2; i++) dst.teeth[i] += (b.teeth[i] - a.teeth[i]) * t;
+    var aa = a.acc || moodTint, bb = b.acc || moodTint;
+    if (!dst.acc) dst.acc = [0, 0, 0];
+    for (i = 0; i < 3; i++) dst.acc[i] = aa[i] + (bb[i] - aa[i]) * t;
+    dst.name = b.name;
+  }
+
+  /* ---- environmental motion state ---------------------------------------
+     The four named profiles live in data.js (CDATA.ENVIRONMENTS); this module
+     only eases their numbers. Everything here is a uniform, so switching a
+     place never rebuilds a buffer or adds a draw call. */
+  var MOTION_KEYS = ['drift', 'rise', 'sway', 'cluster', 'heightCap', 'flight', 'firefly', 'nebula', 'band', 'floor'];
+  var MOTION_BASE = { drift: 0, rise: 0, sway: 0, cluster: 0, heightCap: 0,
+    flight: 1, firefly: 0, nebula: 0, band: 24, floor: -2 };
+  function num(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
+  function motionCopy(o) {
+    var r = {};
+    MOTION_KEYS.forEach(function (k) { r[k] = num(o[k], MOTION_BASE[k]); });
+    return r;
+  }
+  function motionLerp(dst, a, b, t) {
+    MOTION_KEYS.forEach(function (k) { dst[k] = a[k] + (b[k] - a[k]) * t; });
+  }
+  function motionFromProfile(env) {
+    var m = (env && env.motion) || {}, r = {};
+    MOTION_KEYS.forEach(function (k) { r[k] = num(m[k], MOTION_BASE[k]); });
+    return r;
+  }
+
+  var skyNow = skyCopy(SKY_BASE), skyGoal = skyCopy(SKY_BASE), skyFrom = skyCopy(SKY_BASE);
+  var motNow = motionCopy(MOTION_BASE), motGoal = motionCopy(MOTION_BASE), motFrom = motionCopy(MOTION_BASE);
+  var worldName = '', easeT0 = 0, EASE_MS = 1000;
+  var reducedMQL = null;
+  try { reducedMQL = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) {}
+  function calmMotion() {
+    try {
+      return !document.documentElement.classList.contains('force-motion') && !!(reducedMQL && reducedMQL.matches);
+    } catch (e) { return false; }
+  }
+  function beginEase() {
+    skyFrom = skyCopy(skyNow);
+    motFrom = motionCopy(motNow);
+    easeT0 = performance.now();
+  }
+
   var LOW = false;   /* lighter particle budget on phones / weak GPUs */
   var reason = '', rendererName = '', lastNow = 0, fps = 0, ftSum = 0, ftN = 0, quality = 0, slowStreak = 0;
 
@@ -2392,19 +2559,66 @@ window.CWorld = (function () {
   var VERT = [
     'attribute vec3 aPos; attribute vec3 aCol; attribute float aSize; attribute float aSeed;',
     'uniform mat4 uProj; uniform mat4 uView; uniform float uTime; uniform float uPixel; uniform float uAlpha; uniform float uSizeMax;',
+    'uniform float uMotion; uniform float uDrift; uniform float uRise; uniform float uSway;',
+    'uniform float uCluster; uniform float uHeightCap; uniform float uBand; uniform float uFloor; uniform float uFirefly;',
     'varying vec3 vCol; varying float vA;',
+    'float vhash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }',
+    'float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.0-2.0*f);',
+    '  return mix(mix(vhash(i),vhash(i+vec2(1.0,0.0)),u.x), mix(vhash(i+vec2(0.0,1.0)),vhash(i+vec2(1.0,1.0)),u.x), u.y); }',
     'void main(){',
     '  vec3 p = aPos;',
-    '  p.x += sin(uTime*0.55 + aSeed*6.283)*0.10;',
-    '  p.y += cos(uTime*0.42 + aSeed*6.283)*0.09;',
-    '  p.z += sin(uTime*0.33 + aSeed*3.1)*0.08;',
+    '  float mt = uTime * uMotion;',
+    '  float seed = aSeed * 6.2831853;',
+    '  /* baseline idle breath, faded out when the cosmic drift takes over */',
+    '  p.x += sin(mt*0.55 + seed)*0.10*(1.0-uDrift);',
+    '  p.y += cos(mt*0.42 + seed)*0.09*(1.0-uDrift);',
+    '  p.z += sin(mt*0.33 + seed)*0.08*(1.0-uDrift);',
+    '  /* cosmic drift: slow, multi-directional, gravity-free */',
+    '  p.x += (sin(mt*0.23 + seed) + 0.45*cos(mt*0.11 + aSeed*12.566))*0.85*uDrift;',
+    '  p.y += (cos(mt*0.19 + seed*1.7) + 0.50*sin(mt*0.13 + aSeed*3.1))*0.85*uDrift;',
+    '  p.z += (sin(mt*0.17 + seed*0.6) + 0.60*cos(mt*0.09 + aSeed*6.283))*0.85*uDrift;',
+    '  /* reef current: horizontal sine sway acting on the plankton */',
+    '  p.x += sin(mt*(0.55 + aSeed*0.55) + seed)*uSway;',
+    '  p.z += cos(mt*(0.37 + aSeed*0.42) + aSeed*3.1)*uSway*0.35;',
+    '  /* reef rise: invert the idle Y motion into a slow upward current */',
+    '  float riseFade = 1.0;',
+    '  if (uRise > 0.0001) {',
+    '    float span = max(1.0, uBand);',
+    '    float h = mod((p.y - uFloor) + mt*uRise, span);',
+    '    p.y = uFloor + h;',
+    '    riseFade = smoothstep(0.0,0.10,h/span)*(1.0-smoothstep(0.86,1.0,h/span));',
+    '  }',
+    '  /* cloud puffs: a spatial noise threshold gathers points into dense,',
+    '     localized clusters, then flattens each cluster towards a shared',
+    '     horizontal plane so it reads as a cloud rather than a column */',
+    '  if (uCluster > 0.0001) {',
+    '    float n = vnoise(p.xz*0.11 + vec2(2.3, 5.7))*0.75',
+    '            + vnoise(p.xz*0.037 + vec2(9.1, 1.3))*0.25;',
+    '    float puff = smoothstep(1.0 - uCluster, 1.0 - uCluster + 0.18, n);',
+    '    vec2 cell = floor(p.xz/7.0);',
+    '    vec2 cc = (cell + 0.5)*7.0;',
+    '    float cy = uFloor + 2.0 + 8.0*vnoise(cell*0.23 + vec2(0.7, 4.2));',
+    '    p.xz = mix(p.xz, cc, puff*0.62);',
+    '    p.y = mix(p.y, cy + (p.y - cy)*0.18, puff);',
+    '  }',
+    '  /* firefly canopy: softly compress high points below the dropped ceiling */',
+    '  if (uHeightCap > 0.0001) {',
+    '    float rel = p.y - uFloor;',
+    '    if (rel > 0.0) p.y = uFloor + uHeightCap*(1.0 - exp(-rel/uHeightCap));',
+    '  }',
     '  vec4 mv = uView * vec4(p,1.0);',
     '  float d = -mv.z;',
     '  gl_Position = uProj * mv;',
     '  float tw = 0.62 + 0.38*sin(uTime*(0.7+aSeed*2.3)+aSeed*40.0);',
+    '  /* firefly blink: absolute time-based sine, one phase per vertex */',
+    '  float blink = 1.0;',
+    '  if (uFirefly > 0.0001) {',
+    '    float firefly = abs(sin(uTime * aSeed));',
+    '    blink = mix(1.0, 0.16 + 0.84*firefly, uFirefly * uMotion);',
+    '  }',
     '  gl_PointSize = clamp(aSize * uPixel * tw * (105.0/max(d,0.45)), 0.9, uSizeMax*uPixel);',
     '  vCol = aCol;',
-    '  vA = uAlpha * smoothstep(0.6,4.0,d) * (1.0 - smoothstep(190.0,320.0,d)) * (0.55+0.45*tw);',
+    '  vA = uAlpha * smoothstep(0.6,4.0,d) * (1.0 - smoothstep(190.0,320.0,d)) * (0.55+0.45*tw) * blink * riseFade;',
     '}'
   ].join('\n');
 
@@ -2475,7 +2689,7 @@ window.CWorld = (function () {
     add('precision highp float;');
     add('varying vec2 vP;');
     add('uniform vec2 uRes; uniform float uTime; uniform vec3 uFwd,uRight,uUp; uniform float uTanHalf,uAspect;');
-    add('uniform vec3 uTop,uBot,uHor,uAcc,uMoon; uniform float uFlash; uniform vec2 uRes2;');
+    add('uniform vec3 uTop,uBot,uHor,uAcc,uMoon; uniform float uFlash; uniform float uNebula; uniform vec2 uRes2;');
     /* the horizon belongs to the story setting: three sine harmonics, a blocky
        term for crenellations and city roofs, and the ground tint. All of it is
        uniform state, so re-dressing the world costs no extra shader work. */
@@ -2485,6 +2699,20 @@ window.CWorld = (function () {
     add('  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y); }');
     add('float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<' + OCT + ';i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }');
     add('float fbm3(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v; }');
+    /* a vibrant three-octave gas cloud: the moon's replacement for Outer Space */
+    add('vec3 nebulaColor(vec2 p){');
+    add('  float n1 = fbm3(p);');
+    add('  float n2 = fbm3(p*1.9 + vec2(3.7,1.1));');
+    add('  float n3 = fbm3(p*0.7 - vec2(1.4,2.8));');
+    add('  vec3 c1 = vec3(0.58,0.10,0.92);');
+    add('  vec3 c2 = vec3(0.08,0.58,0.98);');
+    add('  vec3 c3 = vec3(1.00,0.25,0.58);');
+    add('  vec3 c4 = vec3(1.00,0.72,0.28);');
+    add('  vec3 c = mix(c1, c2, smoothstep(0.22,0.78,n1));');
+    add('  c = mix(c, c3, smoothstep(0.32,0.86,n2)*0.78);');
+    add('  c += c4 * pow(smoothstep(0.55,1.0,n3), 2.0) * 0.62;');
+    add('  return c;');
+    add('}');
     add('void main(){');
     add('  vec2 ndc = vP;');
     add('  vec3 dir = normalize(uFwd + uRight*(ndc.x*uTanHalf*uAspect) + uUp*(ndc.y*uTanHalf));');
@@ -2510,11 +2738,20 @@ window.CWorld = (function () {
     add('  vec3 g = uGroundCol + uHor*0.05;');
     add('  col = mix(col, g, ground);');
     add('  col += vec3(0.55,0.6,1.0) * uFlash * 0.35 * (1.0-ground);');
-    /* the moon: measured as an angular distance, never as a huge power */
+    /* the moon: measured as an angular distance, never as a huge power.
+       uNebula morphs this exact disc + glow into a coloured gas cloud. */
     add('  float mdist = length(dir - normalize(uMoon));');
     add('  float disc = 1.0 - smoothstep(0.0155, 0.0210, mdist);');
     add('  float glowM = exp(-800.0*mdist*mdist)*0.35 + exp(-60.0*mdist*mdist)*0.09;');
-    add('  col += vec3(1.0,0.97,0.88) * (disc * 2.2 + glowM) * smoothstep(0.02,0.2,h);');
+    add('  vec3 moonCol = vec3(1.0,0.97,0.88) * (disc * 2.2 + glowM);');
+    add('  vec3 nebCol = vec3(0.0);');
+    add('  if (uNebula > 0.001) {');
+    add('    vec2 np = vec2(ang*2.2, h*3.4) + vec2(uTime*0.012, -uTime*0.008);');
+    add('    float cloud = fbm3(np*1.7) * fbm3(np*3.4 + vec2(2.0,1.0));');
+    add('    float mask = exp(-mdist*mdist*3.5) * (1.0 - smoothstep(0.18,1.0,mdist));');
+    add('    nebCol = nebulaColor(np*1.5) * (0.25 + 1.7*cloud) * mask * 1.6;');
+    add('  }');
+    add('  col += mix(moonCol, nebCol, uNebula) * smoothstep(0.02,0.2,h);');
     add('  for (int i=0;i<' + STARS + ';i++){');
     add('    float fi = float(i);');
     add('    float t = fract(uTime*0.055 + fi*0.37);');
@@ -2549,9 +2786,10 @@ window.CWorld = (function () {
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.warn('link', gl.getProgramInfoLog(p)); return null; }
     var o = { p: p, u: {}, a: {} };
     ['uProj', 'uView', 'uTime', 'uPixel', 'uAlpha', 'uSizeMax',
-      'uBookPos', 'uBookRight', 'uBookUp', 'uBookZ', 'uBookScale', 'uAssemble', 'uTurn'
+      'uBookPos', 'uBookRight', 'uBookUp', 'uBookZ', 'uBookScale', 'uAssemble', 'uTurn',
+      'uMotion', 'uDrift', 'uRise', 'uSway', 'uCluster', 'uHeightCap', 'uBand', 'uFloor', 'uFirefly'
     ].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
-    ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uRes2',
+    ['uRes', 'uFwd', 'uRight', 'uUp', 'uTanHalf', 'uAspect', 'uTop', 'uBot', 'uHor', 'uAcc', 'uFlash', 'uMoon', 'uNebula', 'uRes2',
       'uHillA', 'uHillF', 'uHillP', 'uHillBase', 'uTeeth', 'uGroundCol'].forEach(function (n) { o.u[n] = gl.getUniformLocation(p, n); });
     attribs.forEach(function (n) { o.a[n] = gl.getAttribLocation(p, n); });
     return o;
@@ -2608,9 +2846,11 @@ window.CWorld = (function () {
   }
 
   function camera() {
-    var z = -1.5 - prog * 300;
+    /* the cloud-castle profile raises `flight` slightly, so the same scroll
+       covers more Z and the camera keeps soaring through the puffs */
+    var z = -1.5 - prog * 300 * motNow.flight;
     var x = hillX(z) * 0.62;
-    var y = groundY(x, z) + 3.6 + Math.sin(time * .7) * .06;
+    var y = groundY(x, z) + 3.6 + (calmMotion() ? 0 : Math.sin(time * .7) * .06);
     var zAhead = z - 30;
     var xA = hillX(zAhead) * 0.62;
     var eye = [x, y, z];
@@ -2635,32 +2875,23 @@ window.CWorld = (function () {
   function frame() {
     var now = performance.now();
     time = (now - t0) / 1000;
+    var motionOn = !calmMotion();
+    var animTime = motionOn ? time : 0;
     var step = Math.min(3, Math.max(.4, (now - lastNow) / 16.67));   /* frames elapsed */
     prog += (progT - prog) * Math.min(1, 0.075 * step);
 
-    /* ease the palette + horizon towards the selected world (~1 s) */
-    (function () {
-      var k = Math.min(1, 0.085 * step), i;
-      var cols = ['top', 'bot', 'hillA', 'hillF', 'hillP', 'ground'];
-      for (var c = 0; c < cols.length; c++) {
-        var a = skyNow[cols[c]], b2 = skyGoal[cols[c]];
-        a[0] += (b2[0] - a[0]) * k; a[1] += (b2[1] - a[1]) * k; a[2] += (b2[2] - a[2]) * k;
-      }
-      skyNow.base += (skyGoal.base - skyNow.base) * k;
-      for (i = 0; i < 2; i++) skyNow.teeth[i] += (skyGoal.teeth[i] - skyNow.teeth[i]) * k;
-      if (skyGoal.acc) {
-        if (!skyNow.acc) skyNow.acc = moodTint.slice();
-        for (i = 0; i < 3; i++) skyNow.acc[i] += (skyGoal.acc[i] - skyNow.acc[i]) * k;
-      } else if (skyNow.acc) {
-        var settled = true;
-        for (i = 0; i < 3; i++) {
-          skyNow.acc[i] += (moodTint[i] - skyNow.acc[i]) * k;
-          if (Math.abs(skyNow.acc[i] - moodTint[i]) > 0.005) settled = false;
-        }
-        if (settled) skyNow.acc = null;
-      }
-      skyNow.name = skyGoal.name;
-    })();
+    /* ease the palette, horizon and environmental motion over exactly 1.0 s */
+    if (easeT0) {
+      var et = Math.min(1, (now - easeT0) / EASE_MS);
+      var ee = et * et * (3 - 2 * et);
+      skyLerp(skyNow, skyFrom, skyGoal, ee);
+      motionLerp(motNow, motFrom, motGoal, ee);
+      if (et >= 1) easeT0 = 0;
+    } else if (!worldName) {
+      /* the plain night keeps following the selected mood tint */
+      skyGoal.acc = moodTint.slice();
+      skyNow.acc = moodTint.slice();
+    }
 
     /* adaptive quality: a phone that cannot hold the flight gets a smaller
        render target first, and then the cheaper 2D sky */
@@ -2686,8 +2917,9 @@ window.CWorld = (function () {
     }
     lastNow = now;
 
-    /* an occasional far-away lightning, like the reference sky */
-    if (time > nextFlash) { flash = 1; nextFlash = time + rnd(7, 18); }
+    /* an occasional far-away lightning, like the reference sky. Reduced motion
+       holds the static environment: no flash, no drift, no blink. */
+    if (motionOn && time > nextFlash) { flash = 1; nextFlash = time + rnd(7, 18); }
     flash *= Math.pow(0.94, step);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -2711,7 +2943,7 @@ window.CWorld = (function () {
     gl.enableVertexAttribArray(sky.a.aP);
     gl.vertexAttribPointer(sky.a.aP, 2, gl.FLOAT, false, 0, 0);
     gl.uniform2f(sky.u.uRes, W, H);
-    gl.uniform1f(sky.u.uTime, time);
+    gl.uniform1f(sky.u.uTime, animTime);
     gl.uniform3fv(sky.u.uFwd, fwd); gl.uniform3fv(sky.u.uRight, right); gl.uniform3fv(sky.u.uUp, up);
     gl.uniform1f(sky.u.uTanHalf, Math.tan(fov / 2)); gl.uniform1f(sky.u.uAspect, W / Math.max(1, H));
     var skAcc = skyNow.acc || moodTint;
@@ -2728,6 +2960,7 @@ window.CWorld = (function () {
       gl.uniform3f(sky.u.uGroundCol, skyNow.ground[0], skyNow.ground[1], skyNow.ground[2]);
     }
     gl.uniform1f(sky.u.uFlash, flash);
+    gl.uniform1f(sky.u.uNebula, motNow.nebula);
     gl.uniform2f(sky.u.uRes2, W, H);
     var md = norm([-0.34, 0.40, -0.86]);
     gl.uniform3fv(sky.u.uMoon, md);
@@ -2739,10 +2972,19 @@ window.CWorld = (function () {
     gl.useProgram(world.p);
     gl.uniformMatrix4fv(world.u.uProj, false, proj);
     gl.uniformMatrix4fv(world.u.uView, false, view);
-    gl.uniform1f(world.u.uTime, time);
+    gl.uniform1f(world.u.uTime, animTime);
     gl.uniform1f(world.u.uPixel, dpr);
     gl.uniform1f(world.u.uAlpha, 0.18 + 0.80 * Math.min(1, Math.max(0, prog * 7 - 0.15)));
     gl.uniform1f(world.u.uSizeMax, LOW ? 7.0 : 13.0);
+    gl.uniform1f(world.u.uMotion, motionOn ? 1.0 : 0.0);
+    gl.uniform1f(world.u.uDrift, motNow.drift);
+    gl.uniform1f(world.u.uRise, motNow.rise);
+    gl.uniform1f(world.u.uSway, motNow.sway);
+    gl.uniform1f(world.u.uCluster, motNow.cluster);
+    gl.uniform1f(world.u.uHeightCap, motNow.heightCap);
+    gl.uniform1f(world.u.uBand, motNow.band);
+    gl.uniform1f(world.u.uFloor, motNow.floor);
+    gl.uniform1f(world.u.uFirefly, motNow.firefly);
 
     chunks.forEach(function (c) {
       bindAttr(world, 'aPos', c.pos, 3);
@@ -2771,7 +3013,7 @@ window.CWorld = (function () {
         gl.useProgram(bookP.p);
         gl.uniformMatrix4fv(bookP.u.uProj, false, proj);
         gl.uniformMatrix4fv(bookP.u.uView, false, view);
-        gl.uniform1f(bookP.u.uTime, time);
+        gl.uniform1f(bookP.u.uTime, animTime);
         gl.uniform1f(bookP.u.uPixel, dpr);
         gl.uniform1f(bookP.u.uSizeMax, LOW ? 6.0 : 8.0);
         gl.uniform1f(bookP.u.uAlpha, 0.82 * fade);
@@ -2911,10 +3153,22 @@ window.CWorld = (function () {
     count: function () { return S.length; },
     stop: function (why) { handOver(why || 'stopped'); },
     turn: function () { return Math.max(0, Math.min(1, prog / 0.055)); },
-    /* re-dress the sky for a story setting: {sky:[top,bottom], accent, scene} */
+    /* re-dress the sky for a story setting: {sky:[top,bottom], accent, scene}.
+       The environment profile in data.js owns the horizon geometry and the
+       movement uniforms; `beginEase` gives all of it a 1.0 s transition. */
     setScene: function (setting) {
-      if (!setting) { skyGoal = skyCopy(SKY_BASE); worldName = ''; return ''; }
-      var hz = HORIZONS[setting.scene] || HORIZONS.forest;
+      if (!setting) {
+        skyGoal = skyCopy(SKY_BASE);
+        skyGoal.acc = moodTint.slice();
+        motGoal = motionCopy(MOTION_BASE);
+        worldName = '';
+        beginEase();
+        return '';
+      }
+      var data = window.CDATA || {};
+      var envId = setting.env || (data.ENV_BY_SCENE && data.ENV_BY_SCENE[setting.scene]) || 'default';
+      var env = data.ENVIRONMENTS ? (data.ENVIRONMENTS[envId] || data.ENVIRONMENTS.default) : null;
+      var hz = (env && env.ground) || HORIZONS[setting.scene] || HORIZONS.forest;
       var t = hexRGB(setting.sky && setting.sky[0]), b = hexRGB(setting.sky && setting.sky[1]), a = hexRGB(setting.accent);
       skyGoal = {
         top: [t[0] * 0.55, t[1] * 0.55, t[2] * 0.55],
@@ -2924,10 +3178,13 @@ window.CWorld = (function () {
         base: hz.base, teeth: hz.teeth.slice(), ground: hz.ground.slice(),
         name: setting.id || ''
       };
+      motGoal = motionFromProfile(env);
       worldName = skyGoal.name;
+      beginEase();
       return worldName;
     },
     world: function () { return worldName; },
+    environment: function () { return { id: worldName, motion: motionCopy(motNow) }; },
     info: info
   };
 })();
@@ -3410,6 +3667,7 @@ window.CCursor = (function () {
   function previewSetting(id) {
     var s = id ? findSetting(id) : null;
     if (window.CWorld && window.CWorld.setScene) window.CWorld.setScene(s);
+    if (window.CStars && window.CStars.setScene) window.CStars.setScene(s);
     if (!s) { themeTo(null, 620, true); return; }
     var m = findMood(S.wizard.mood);
     themeTo({
@@ -4287,7 +4545,10 @@ window.CCursor = (function () {
       clearTheme(); A.stopMusic(); A.stopSpeak(); reading = false;
       wakeOff(); stopReadingFocus(); A.nightMode(false);
     }
-    if (name !== 'create' && name !== 'story' && window.CWorld && window.CWorld.setScene) window.CWorld.setScene(null);
+    if (name !== 'create' && name !== 'story') {
+      if (window.CWorld && window.CWorld.setScene) window.CWorld.setScene(null);
+      if (window.CStars && window.CStars.setScene) window.CStars.setScene(null);
+    }
     document.body.classList.toggle('app-view', name !== 'home');
     if (name === 'home') {
       $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
