@@ -197,6 +197,28 @@ book** in front of the camera, turns one page, then dissolves back into stars as
 - **Reduced motion** collapses all of it to a still frame, and the hero copy is not hidden if the
   animation cannot run.
 
+### The world dial (story settings)
+
+Every story setting owns a world, and the builder shows it to you: tapping a place in
+**Create** re-dresses the night behind the form, so the place you pick is the place you see while
+you pick it.
+
+- **Sky.** The reference sky's `uTop` / `uBot` / `uHor` / `uAcc` were constants; they are now state
+  that eases towards the chosen setting's palette (taken from the same `SETTINGS` array the reader
+  already uses, so the builder, the cover and the reader never disagree).
+- **Horizon.** The three-sine horizon profile became uniforms too — three amplitudes,
+  frequencies and phases, plus a blocky term for crenellations and city roofs and a ground tint.
+  `forest` gets tall spiky conifers, `castle` low towers with battlements, `city` roof blocks,
+  `mountain` and `glacier` slow ridges, `sea` / `island` / `ship` a flat water line, `farm` a low
+  rolling hill, `space` no ground at all. Unknown scenes fall back to `forest`.
+- **Cost.** Same three `sin` per pixel as before (the old horizon was three sines), one `step`, and
+  a handful of extra uniform uploads per frame. No new draw calls, no rebuilt buffers, no change
+  to the point budget — the phone's 30 fps / 0.85× dpr envelope is untouched.
+- **Page palette.** `--sky-top`, `--sky-bottom`, `--accent`, `--gold`, `--gold-2` and `--gold-deep`
+  ease over ~600 ms in the same rAF, so the gradient, the pills and the captions turn over with the
+  sky. Leaving **Create** eases everything back to the plain night.
+- **Reduced motion** snaps instead of gliding. `?debug=1` now also prints the current world.
+
 ### Why the sky used to crawl on a phone
 
 The sky is a full-screen fragment shader and it was written for a desktop GPU:
