@@ -1,6 +1,6 @@
 /* storiesAI — all sound is synthesised with the Web Audio API. No audio files, no network. */
 window.CAudio = (function () {
-  var ctx = null, master = null, musicBus = null, sfxBus = null;
+  var ctx = null, master = null, musicBus = null, sfxBus = null, outputAnalyser = null;
   var loop = null, mood = null, step = 0, musicOn = false, soundOn = false, duckTimer = null;
   /* sleep-conducive state: a low-pass "night curtain" over everything, a tempo
      scale the chord clock reads, and the interrupt fade for a locked screen */
@@ -19,7 +19,11 @@ window.CAudio = (function () {
       nightFilter.frequency.value = 20000;   /* wide open by day */
       nightFilter.Q.value = 0.0001;          /* no resonant whistle at the corner */
       master.connect(nightFilter);
-      nightFilter.connect(ctx.destination);
+      outputAnalyser = ctx.createAnalyser();
+      outputAnalyser.fftSize = 1024;
+      outputAnalyser.smoothingTimeConstant = 0;
+      nightFilter.connect(outputAnalyser);
+      outputAnalyser.connect(ctx.destination);
       musicBus = ctx.createGain(); musicBus.gain.value = 0; musicBus.connect(master);
       sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
       /* the story said goodnight before any sound was ever made */
@@ -30,6 +34,33 @@ window.CAudio = (function () {
   }
 
   function now() { return ctx ? ctx.currentTime : 0; }
+
+  function outputRms() {
+    if (!outputAnalyser) return 0;
+    var length = outputAnalyser.fftSize;
+    var samples = new Float32Array(length), sum = 0, i, value;
+    if (typeof outputAnalyser.getFloatTimeDomainData === 'function') {
+      outputAnalyser.getFloatTimeDomainData(samples);
+      for (i = 0; i < length; i++) sum += samples[i] * samples[i];
+    } else if (typeof outputAnalyser.getByteTimeDomainData === 'function') {
+      var bytes = new Uint8Array(length);
+      outputAnalyser.getByteTimeDomainData(bytes);
+      for (i = 0; i < length; i++) { value = (bytes[i] - 128) / 128; sum += value * value; }
+    }
+    return Math.sqrt(sum / length);
+  }
+
+  function getDiagnostics() {
+    var supported = !!(window.AudioContext || window.webkitAudioContext);
+    return {
+      supported: supported,
+      state: ctx ? ctx.state : (supported ? 'not started' : 'unsupported'),
+      soundOn: soundOn,
+      musicOn: musicOn,
+      sampleRate: ctx ? ctx.sampleRate : 0,
+      outputRms: outputRms()
+    };
+  }
 
   function env(node, at, attack, hold, release, peak) {
     var g = node.gain;
@@ -266,6 +297,7 @@ window.CAudio = (function () {
   return {
     ensure: ensure, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
     playSfx: playSfx, setSound: setSound, isSoundOn: function () { return soundOn; },
+    getDiagnostics: getDiagnostics,
     speak: speak, stopSpeak: stopSpeak, isSpeaking: isSpeaking,
     nightMode: nightMode, isNight: function () { return nightOn; },
     isMusicOn: function () { return musicOn; }

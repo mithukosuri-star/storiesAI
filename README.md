@@ -316,9 +316,10 @@ frame after the hero paints instead of blocking the first render.
    `index.html`. Merging a commit does not redeploy Netlify by itself (Netlify → *Deploys* →
    *Trigger deploy*, or re-drop the folder). Installed apps may also need one close/reopen for the
    `storiesai-shell-v4` service worker to take over.
-2. **`?debug=1`** on the URL adds a small readout of what the GPU is really doing: WebGL up or not
-   (and why), frame rate, point budget, quality step, whether the 2D sky is running, the reduced
-   motion flag and the viewport. A screenshot of that box identifies the cause immediately.
+2. **`?debug=1`** on the URL adds a small readout of WebGL state, frame rate, point budget, quality,
+   2D sky state, reduced-motion settings, viewport, and live audio status. Turn sound on or tap a
+   golden word; the audio context state and output RMS show whether non-silent samples reach the
+   Web Audio output graph. This verifies generated signal, not physical speaker volume.
 3. **☰ → Sky: 2D stars** swaps the WebGL flight for the much cheaper animated canvas sky on that
    device (choose *flying world* to go back; that one reloads).
 

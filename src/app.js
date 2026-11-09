@@ -1155,8 +1155,8 @@
   }
 
   /* ---------------- diagnostics: add ?debug=1 to the URL ----------------
-     A tiny readout of what the GPU is actually doing, so a phone screenshot
-     says everything: is WebGL up, at what frame rate, and is the 2D sky running. */
+     A tiny readout of live rendering and audio output so a phone screenshot
+     shows whether the sky is running and whether sound reaches the output graph. */
   function initDebug() {
     if (!/[?&]debug/.test(location.search)) return;
     var el = document.createElement('div');
@@ -1167,6 +1167,7 @@
     var build = function () {
       var w = (window.CWorld && window.CWorld.info) ? window.CWorld.info() : { up: false, reason: 'no world' };
       var st = (window.CStars && window.CStars.info) ? window.CStars.info() : { running: false, count: 0 };
+      var audio = A && A.getDiagnostics ? A.getDiagnostics() : { state: 'unavailable', soundOn: false, musicOn: false, outputRms: 0 };
       return [
         'sky: ' + (w.up ? 'webgl flying' : 'webgl OFF — ' + (w.reason || '?')),
         'fps ' + (w.fps || '–') + ' · dpr ' + (w.dpr || '–') + ' · points ' + (w.points || 0) + ' · quality ' + (w.quality || 0),
@@ -1174,6 +1175,7 @@
         'book ' + (w.book || 0) + ' points · turn ' + (window.CWorld && window.CWorld.turn ? window.CWorld.turn().toFixed(2) : '–'),
         'world: ' + (w.world || 'plain night') + ' · horizon + palette lerp',
         '2d sky: ' + (st.running ? 'running · ' + st.count + ' stars · mode ' + st.mode : 'off'),
+        'audio: ' + audio.state + ' · sound ' + (audio.soundOn ? 'on' : 'off') + ' · music ' + (audio.musicOn ? 'on' : 'off') + ' · output RMS ' + Number(audio.outputRms || 0).toFixed(5),
         'reduced-motion ' + mq('(prefers-reduced-motion: reduce)') + ' · motion override ' + (document.documentElement.classList.contains('force-motion') ? 'yes' : 'no'),
         'view ' + window.innerWidth + '×' + window.innerHeight + ' · scroll ' + Math.round(window.scrollY || 0),
         w.renderer ? String(w.renderer).slice(0, 46) : ''
