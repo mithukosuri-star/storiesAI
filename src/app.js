@@ -792,7 +792,7 @@
         '<div class="voice-hint"><span class="vh-label">' + v.icon + ' ' + esc(v.short) + '</span>' +
           '<span class="vh-line">' + esc(v.line) + '</span></div>' +
         '<h3>' + esc(c.title) + '</h3>' +
-        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + paragraphise(c.text).map(function (p) {
+        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + paragraphise(E.limitChapterText(c.text)).map(function (p) {
           return '<p>' + E.renderText(p) + '</p>';
         }).join('') + '</div>' +
         '<div class="chap-num">' + String(i + 1).padStart(2, '0') + ' / ' + String(story.chapters.length).padStart(2, '0') + '</div></article>';
@@ -1028,7 +1028,7 @@
           var ids = Object.create(null); S.stories.forEach(function (s) { ids[s.id] = 1; });
           var added = 0;
           incoming.forEach(function (s) {
-            if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !Array.isArray(s.chapters)) return;
+            if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !E.areValidChapters(s.chapters)) return;
             if (!E.isValidNames(s.cfg.names)) return;
             /* Older backups may omit this field; treat those as chapter one. Reject
                supplied values unless they are bounded, positive safe integers. */

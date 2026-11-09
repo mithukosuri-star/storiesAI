@@ -1519,8 +1519,27 @@ window.CAudio = (function () {
 window.CEngine = (function () {
   var D = window.CDATA;
   var MAX_NAME_LENGTH = 160;
+  var MAX_CHAPTER_TEXT_LENGTH = 20000;
+  var MAX_CHAPTER_COUNT = 20;
+  var MAX_AI_RESPONSE_LENGTH = 500000;
   function isValidNames(value) {
     return value == null || (typeof value === 'string' && value.length <= MAX_NAME_LENGTH);
+  }
+  function isValidChapterText(value) {
+    return typeof value === 'string' && value.length <= MAX_CHAPTER_TEXT_LENGTH;
+  }
+  function areValidChapters(chapters) {
+    if (!Array.isArray(chapters) || !chapters.length || chapters.length > MAX_CHAPTER_COUNT) return false;
+    for (var i = 0; i < chapters.length; i++) {
+      var chapter = chapters[i];
+      if (!chapter || typeof chapter !== 'object' || Array.isArray(chapter) || !isValidChapterText(chapter.text)) return false;
+    }
+    return true;
+  }
+  function limitChapterText(raw) {
+    var text;
+    try { text = String(raw == null ? '' : raw); } catch (e) { text = ''; }
+    return text.length > MAX_CHAPTER_TEXT_LENGTH ? text.slice(0, MAX_CHAPTER_TEXT_LENGTH) : text;
   }
 
   /* deterministic-ish PRNG so the same inputs still give a fresh tale each night */
@@ -1705,8 +1724,8 @@ window.CEngine = (function () {
 
     var soundWords = [];
     chapters.forEach(function (c) {
-      var re = /\[\[(\w+)\|([^\]]+)\]\]/g, m;
-      while ((m = re.exec(c.text)) !== null) soundWords.push({ key: m[1], word: m[2] });
+      c.text = limitChapterText(c.text);
+      scanSoundTokens(c.text, function (token) { soundWords.push({ key: token.key, word: token.word }); });
     });
 
     return {
@@ -1751,6 +1770,7 @@ window.CEngine = (function () {
   function normaliseAI(raw, cfg) {
     var data = raw;
     if (typeof raw === 'string') {
+      if (raw.length > MAX_AI_RESPONSE_LENGTH) throw new Error('AI response exceeds the size limit');
       var cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
       var a = cleaned.indexOf('{'), b = cleaned.lastIndexOf('}');
       if (a !== -1 && b > a) cleaned = cleaned.slice(a, b + 1);
@@ -1760,6 +1780,7 @@ window.CEngine = (function () {
     var chapters = data.chapters;
     if (!Array.isArray(chapters) || !chapters.length) {
       var text = String(data.text || data.story || '');
+      if (text.length > MAX_CHAPTER_TEXT_LENGTH * MAX_CHAPTER_COUNT) throw new Error('AI story exceeds the text limit');
       var paras = text.split(/\n\s*\n/).filter(Boolean);
       var per = Math.max(1, Math.ceil(paras.length / (cfg.length === 'long' ? 5 : cfg.length === 'short' ? 3 : 4)));
       chapters = [];
@@ -1767,20 +1788,25 @@ window.CEngine = (function () {
         chapters.push({ title: 'Part ' + (chapters.length + 1), text: paras.slice(i, i + per).join(' '), voice: 'green' });
       }
     }
+    if (chapters.length > MAX_CHAPTER_COUNT) throw new Error('AI returned too many chapters');
     chapters = chapters.map(function (c, i) {
-      var txt = typeof c === 'string' ? c : (c.text || c.content || '');
+      var txt = typeof c === 'string' ? c : (c && (c.text || c.content) || '');
+      txt = String(txt);
+      if (!isValidChapterText(txt)) throw new Error('AI chapter exceeds the ' + MAX_CHAPTER_TEXT_LENGTH + ' character limit');
       return {
-        title: c.title || 'Chapter ' + (i + 1),
-        text: String(txt).trim(),
-        voice: ['green', 'yellow', 'blue', 'red'].indexOf(c.voice) >= 0 ? c.voice : (VOICE_MAPS[cfg.mood] || VOICE_MAPS.gentle)[i % 5]
+        title: (c && c.title) || 'Chapter ' + (i + 1),
+        text: txt.trim(),
+        voice: c && ['green', 'yellow', 'blue', 'red'].indexOf(c.voice) >= 0 ? c.voice : (VOICE_MAPS[cfg.mood] || VOICE_MAPS.gentle)[i % 5]
       };
     }).filter(function (c) { return c.text.length > 20; });
     if (!chapters.length) throw new Error('AI returned no usable chapters');
     var questions = Array.isArray(data.questions) ? data.questions.map(String) : [
       'What was your favourite moment?', 'How did the hero feel at the end?', 'Where should we go tomorrow night?'
     ];
-    var soundWords = [], re = /\[\[(\w+)\|([^\]]+)\]\]/g, m;
-    chapters.forEach(function (c) { re.lastIndex = 0; while ((m = re.exec(c.text)) !== null) soundWords.push({ key: m[1], word: m[2] }); });
+    var soundWords = [];
+    chapters.forEach(function (c) {
+      scanSoundTokens(c.text, function (token) { soundWords.push({ key: token.key, word: token.word }); });
+    });
     return {
       id: 'story-' + Date.now().toString(36) + '-ai',
       createdAt: new Date().toISOString(),
@@ -1835,26 +1861,76 @@ window.CEngine = (function () {
     return Promise.resolve(weaveOffline(cfg));
   }
 
+  /* A backwards close-bracket index makes every candidate's end check O(1).
+     Malformed openers then advance by one character, so later openers are found
+     without rescanning their suffixes. */
+  function isSoundKeyChar(code) {
+    return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122) || code === 95;
+  }
+  function scanSoundTokens(text, onToken) {
+    var length = text.length, nextClose = new Array(length + 1), nearest = length;
+    for (var p = length; p >= 0; p--) {
+      if (p < length && text.charAt(p) === ']') nearest = p;
+      nextClose[p] = nearest;
+    }
+
+    var i = 0;
+    while (i + 1 < length) {
+      if (text.charAt(i) !== '[' || text.charAt(i + 1) !== '[') { i++; continue; }
+      var start = i, keyStart = i + 2, cursor = keyStart;
+      while (cursor < length && isSoundKeyChar(text.charCodeAt(cursor))) cursor++;
+      if (cursor === keyStart || text.charAt(cursor) !== '|') { i = start + 1; continue; }
+
+      var wordStart = cursor + 1, close = nextClose[wordStart];
+      if (close > wordStart && close + 1 < length && text.charAt(close + 1) === ']') {
+        onToken({ start: start, end: close + 2, key: text.slice(keyStart, cursor), word: text.slice(wordStart, close) });
+        i = close + 2;
+      } else {
+        i = start + 1;
+      }
+    }
+  }
+
+  function escapeText(raw) {
+    return String(raw).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   /* wind sways, weather and bells glow: the class is chosen here because the
      markup for a golden word is generated, never hand written */
   var WORD_CLASS = { wind: 'word-wind', thunder: 'word-magic', waves: 'word-magic', bells: 'word-magic', twinkle: 'word-magic' };
   function renderText(raw) {
-    return String(raw)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\[\[(\w+)\|([^\]]+)\]\]/g, function (m, key, word) {
-        if (!D.SFX[key]) return word;
-        var cls = WORD_CLASS[key] ? ' ' + WORD_CLASS[key] : '';
-        return '<button type="button" class="sound-word' + cls + '" data-sfx="' + key + '" title="Tap to hear ' + D.SFX[key].label + '" aria-label="Hear ' + D.SFX[key].label + '"><span class="sw-dot">✦</span>' + word + '</button>';
-      });
+    var text = limitChapterText(raw), out = [], copiedThrough = 0;
+    scanSoundTokens(text, function (token) {
+      out.push(escapeText(text.slice(copiedThrough, token.start)));
+      var word = escapeText(token.word), sfx = Object.prototype.hasOwnProperty.call(D.SFX, token.key) ? D.SFX[token.key] : null;
+      if (!sfx) out.push(word);
+      else {
+        var cls = Object.prototype.hasOwnProperty.call(WORD_CLASS, token.key) ? ' ' + WORD_CLASS[token.key] : '';
+        out.push('<button type="button" class="sound-word' + cls + '" data-sfx="' + token.key + '" title="Tap to hear ' + sfx.label + '" aria-label="Hear ' + sfx.label + '"><span class="sw-dot">✦</span>' + word + '</button>');
+      }
+      copiedThrough = token.end;
+    });
+    out.push(escapeText(text.slice(copiedThrough)));
+    return out.join('');
   }
 
   function plainText(raw) {
-    return String(raw).replace(/\[\[(\w+)\|([^\]]+)\]\]/g, function (m, k, w) { return w; });
+    var text = limitChapterText(raw), out = [], copiedThrough = 0;
+    scanSoundTokens(text, function (token) {
+      out.push(text.slice(copiedThrough, token.start), token.word);
+      copiedThrough = token.end;
+    });
+    out.push(text.slice(copiedThrough));
+    return out.join('');
   }
 
   return {
     generate: generate, renderText: renderText, plainText: plainText, namesOf: namesOf, aiPrompt: aiPrompt,
-    MAX_NAME_LENGTH: MAX_NAME_LENGTH, isValidNames: isValidNames
+    limitChapterText: limitChapterText,
+    MAX_NAME_LENGTH: MAX_NAME_LENGTH, isValidNames: isValidNames,
+    MAX_CHAPTER_TEXT_LENGTH: MAX_CHAPTER_TEXT_LENGTH, MAX_CHAPTER_COUNT: MAX_CHAPTER_COUNT,
+    isValidChapterText: isValidChapterText, areValidChapters: areValidChapters
   };
 })();
 
@@ -4095,7 +4171,7 @@ window.CCursor = (function () {
         '<div class="voice-hint"><span class="vh-label">' + v.icon + ' ' + esc(v.short) + '</span>' +
           '<span class="vh-line">' + esc(v.line) + '</span></div>' +
         '<h3>' + esc(c.title) + '</h3>' +
-        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + paragraphise(c.text).map(function (p) {
+        '<div class="prose" lang="' + esc(story.cfg.language || 'en') + '">' + paragraphise(E.limitChapterText(c.text)).map(function (p) {
           return '<p>' + E.renderText(p) + '</p>';
         }).join('') + '</div>' +
         '<div class="chap-num">' + String(i + 1).padStart(2, '0') + ' / ' + String(story.chapters.length).padStart(2, '0') + '</div></article>';
@@ -4331,7 +4407,7 @@ window.CCursor = (function () {
           var ids = Object.create(null); S.stories.forEach(function (s) { ids[s.id] = 1; });
           var added = 0;
           incoming.forEach(function (s) {
-            if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !Array.isArray(s.chapters)) return;
+            if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !E.areValidChapters(s.chapters)) return;
             if (!E.isValidNames(s.cfg.names)) return;
             /* Older backups may omit this field; treat those as chapter one. Reject
                supplied values unless they are bounded, positive safe integers. */
