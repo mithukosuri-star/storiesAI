@@ -714,6 +714,9 @@
     }
     if (!cfg.names || !cfg.names.trim()) { location.hash = '#/create'; toast('First, give the hero a name ✦'); return; }
     if (S.stars < 1) { addStarsModal('Your pouch is empty'); return; }
+    /* Capture the pouch at the moment creation starts. The charge is committed
+       only after a story has been generated successfully. */
+    var balanceAtStart = S.stars;
     A.stopSpeak(); reading = false;
     location.hash = '#/generating';
     var ai = S.settings.ai.enabled && S.settings.ai.endpoint ? S.settings.ai : null;
@@ -735,7 +738,17 @@
       setTimeout(function () {
         clearInterval(iv); stopWeave(); $('#genBar').style.width = '100%';
         if (barWrap) barWrap.setAttribute('aria-valuenow', '100');
+        var balanceBeforeCharge = S.stars;
         S.stars -= 1;
+        /* Keep the exact debit beside the story so later checks can attribute
+           the pouch change to this successful creation. */
+        story.starTransaction = {
+          balanceAtStart: balanceAtStart,
+          balanceBefore: balanceBeforeCharge,
+          balanceAfter: S.stars,
+          starsSpent: balanceBeforeCharge - S.stars,
+          recordedAt: new Date().toISOString()
+        };
         if (cfg.type === 'series') story.seriesId = cfg.seriesId || ('series-' + Date.now().toString(36));
         story.chapterNumber = cfg.chapterNumber || 1;
         S.stories.unshift(story);
@@ -785,6 +798,10 @@
     applyTheme(story);
     if (S.settings.music && S.settings.sound) { A.setSound(true); A.startMusic(story.cfg.mood); syncSound(); }
     var s = findSetting(story.cfg.setting), m = findMood(story.cfg.mood), lang = (D.LANGUAGES.filter(function (l) { return l.id === story.cfg.language; })[0] || D.LANGUAGES[0]);
+    var txn = story.starTransaction;
+    var pouchSummary = txn && Number.isSafeInteger(txn.balanceBefore) && Number.isSafeInteger(txn.balanceAfter) &&
+      txn.balanceBefore >= 0 && txn.balanceAfter >= 0 && txn.starsSpent === 1 && txn.balanceAfter === txn.balanceBefore - 1
+      ? ' · Pouch ' + txn.balanceBefore + ' → ' + txn.balanceAfter + ' Stars' : '';
     var chaptersHTML = story.chapters.map(function (c, i) {
       var v = D.VOICES[c.voice] || D.VOICES.green;
       return '<article class="chapter" id="chap-' + i + '" style="--voice:' + v.css + '">' +
@@ -800,7 +817,7 @@
 
     var html =
       '<div class="story-cover"><div class="scene-art">' + scenery(s, m, false) + '</div><div class="cover-text">' +
-      '<div class="meta">✦ ' + esc(story.source === 'ai' ? 'Written by your AI storyteller' : 'Woven on this device') + ' · ' + esc(prettyDate(story.createdAt)) + '</div>' +
+      '<div class="meta">✦ ' + esc(story.source === 'ai' ? 'Written by your AI storyteller' : 'Woven on this device') + ' · ' + esc(prettyDate(story.createdAt)) + esc(pouchSummary) + '</div>' +
       '<h1>' + esc(story.title) + '</h1><div class="cover-meta">' +
       '<span class="pill">' + esc(label('age', story.cfg.age)) + '</span><span class="pill">' + esc(String(story.cfg.customValue || '').trim() || label('value', story.cfg.value)) + '</span>' +
       '<span class="pill">' + esc(String(story.cfg.customPlace || '').trim() || s.label) + '</span><span class="pill">' + esc(lang.native) + '</span>' +
