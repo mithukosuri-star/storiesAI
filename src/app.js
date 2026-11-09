@@ -828,6 +828,7 @@
       '<button class="tool-btn" id="readToggle">🔊 Read to me</button>' +
       '<button class="tool-btn" id="fontMinus">A−</button><button class="tool-btn" id="fontPlus">A+</button>' +
       '<span class="spacer"></span>' +
+      '<button class="tool-btn" id="copyStory">Copy text</button>' +
       '<button class="tool-btn" id="shareStory">↗ Share</button>' +
       '<button class="tool-btn" id="printStory">⎙ Print</button>' +
       '<button class="tool-btn" id="deleteStory">🗑</button>' +
@@ -869,6 +870,7 @@
         S.settings.fontSize = Math.max(15, Math.min(28, (S.settings.fontSize || 20) + (e.target.closest('#fontPlus') ? 2 : -2)));
         save(); $('#reader').style.setProperty('--readsize', S.settings.fontSize + 'px'); return;
       }
+      if (e.target.closest('#copyStory')) { copyStory(story); return; }
       if (e.target.closest('#shareStory')) { shareStory(story); return; }
       if (e.target.closest('#printStory')) { window.print(); return; }
       if (e.target.closest('#deleteStory')) {
@@ -973,11 +975,37 @@
     next();
   }
 
+  function storyClipboardText(story) {
+    return story.title + '\n\n' + story.chapters.map(function (c) { return c.title + '\n' + E.plainText(c.text); }).join('\n\n') + '\n\n— made with storiesAI ✦';
+  }
+  function legacyCopy(text) {
+    var field = document.createElement('textarea'), copied = false;
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.setAttribute('aria-hidden', 'true');
+    field.style.position = 'fixed'; field.style.left = '-9999px'; field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.focus(); field.select();
+    try { copied = !!document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(field);
+    return copied;
+  }
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        navigator.clipboard.writeText(text).then(function () { toast('Story copied to clipboard'); }, function () {
+          toast(legacyCopy(text) ? 'Story copied to clipboard' : 'Could not copy the story');
+        });
+        return;
+      } catch (e) {}
+    }
+    toast(legacyCopy(text) ? 'Story copied to clipboard' : 'Could not copy the story');
+  }
+  function copyStory(story) { copyTextToClipboard(storyClipboardText(story)); }
   function shareStory(story) {
-    var text = story.title + '\n\n' + story.chapters.map(function (c) { return c.title + '\n' + E.plainText(c.text); }).join('\n\n') + '\n\n— made with storiesAI ✦';
+    var text = storyClipboardText(story);
     if (navigator.share) navigator.share({ title: story.title, text: text }).catch(function () {});
-    else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { toast('Story copied to clipboard'); }, function () { toast('Could not copy'); });
-    else toast('Sharing is not supported here');
+    else copyTextToClipboard(text);
   }
 
   /* ---------------- library ---------------- */

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>storiesAI — Clipboard Inspector</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #080713; color: #f7f1e4; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: clamp(18px, 4vw, 48px); }
+    main { max-width: 1050px; margin: 0 auto; }
+    .eyebrow { color: #e9c76e; font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: .2em 0; font: 500 clamp(2rem, 5vw, 3.4rem)/1.05 Georgia, serif; }
+    .intro, .hint { color: #bcb6c8; }
+    .panel { margin-top: 24px; padding: clamp(16px, 3vw, 28px); border: 1px solid #3b354d; border-radius: 16px; background: #100e1b; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    button { border: 1px solid #887345; border-radius: 999px; padding: 10px 16px; background: #211b2b; color: #fff6dc; font: inherit; cursor: pointer; }
+    button.primary { background: #c59e46; color: #171111; font-weight: 700; }
+    button:focus-visible, textarea:focus-visible { outline: 3px solid #f2d37d; outline-offset: 3px; }
+    label { display: block; margin: 10px 0 8px; font-weight: 700; }
+    textarea { display: block; width: 100%; min-height: 270px; resize: vertical; border: 1px solid #4a4358; border-radius: 10px; padding: 14px; background: #090812; color: #f8f4ea; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; tab-size: 2; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; margin: 18px 0; }
+    .metric { min-width: 0; padding: 12px; border-radius: 9px; background: #191625; }
+    .metric dt { color: #bcb6c8; font-size: .8rem; }
+    .metric dd { margin: 3px 0 0; overflow-wrap: anywhere; font: 600 1rem ui-monospace, monospace; }
+    #markupStatus { margin: 14px 0; padding: 11px 13px; border-radius: 8px; background: #20202a; }
+    #markupStatus.ok { color: #baf0c2; background: #12241b; }
+    #markupStatus.warn { color: #ffd5b4; background: #301b17; }
+    pre { min-height: 100px; max-height: 70vh; overflow: auto; margin: 0; padding: 14px; border: 1px solid #393346; border-radius: 9px; background: #090812; color: #f8f4ea; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+    .hint { margin: 8px 0 0; font-size: .88rem; }
+    @media (max-width: 520px) { .toolbar button { flex: 1 1 100%; } textarea { min-height: 220px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Offline QA utility</p>
+    <h1>Clipboard Inspector</h1>
+    <p class="intro">Paste the story copied from the reader. This page reads the complete value, displays it as plain text, checks for markup signatures, and lets you save a retained text snapshot.</p>
+    <section class="panel" aria-labelledby="payload-heading">
+      <div class="toolbar">
+        <button class="primary" id="pasteClipboard" type="button">Paste from clipboard</button>
+        <button id="downloadText" type="button">Download full text</button>
+        <button id="clearText" type="button">Clear</button>
+      </div>
+      <h2 id="payload-heading">Clipboard payload</h2>
+      <label for="payload">Editable full-text field</label>
+      <textarea id="payload" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste the copied story here with Ctrl+V / ⌘V, or use Paste from clipboard."></textarea>
+      <p class="hint">Clipboard read permission requires a secure context and a user gesture. If that button is unavailable, click the field and paste normally.</p>
+      <dl class="metrics">
+        <div class="metric"><dt>Characters</dt><dd id="charCount">0</dd></div>
+        <div class="metric"><dt>Lines</dt><dd id="lineCount">0</dd></div>
+        <div class="metric"><dt>UTF-8 bytes</dt><dd id="byteCount">0</dd></div>
+        <div class="metric"><dt>SHA-256</dt><dd id="sha256">—</dd></div>
+      </dl>
+      <p id="markupStatus" role="status" aria-live="polite">Waiting for clipboard text.</p>
+      <h2>Full text readback</h2>
+      <pre id="readback" aria-label="Complete plain-text readback">The complete pasted payload will appear here.</pre>
+    </section>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var editor = document.getElementById('payload');
+      var readback = document.getElementById('readback');
+      var status = document.getElementById('markupStatus');
+      var charCount = document.getElementById('charCount');
+      var lineCount = document.getElementById('lineCount');
+      var byteCount = document.getElementById('byteCount');
+      var hashLabel = document.getElementById('sha256');
+      var patterns = [
+        { label: 'HTML/XML tags', pattern: /<\/?[A-Za-z][^>]*>/ },
+        { label: 'sound-effect tokens', pattern: /\[\[[A-Za-z0-9_]+\|[^\]]+\]\]/ },
+        { label: 'Markdown code fences', pattern: /```/ }
+      ];
+
+      function inspect() {
+        var text = editor.value;
+        readback.textContent = text || 'The clipboard payload is empty.';
+        charCount.textContent = String(text.length);
+        lineCount.textContent = text ? String(text.split(/\r\n|\r|\n/).length) : '0';
+        byteCount.textContent = String(new TextEncoder().encode(text).length);
+        var found = patterns.filter(function (item) { return item.pattern.test(text); }).map(function (item) { return item.label; });
+        status.textContent = found.length ? 'Markup detected: ' + found.join(', ') : (text ? 'No HTML, sound-token, or code-fence markup detected.' : 'Waiting for clipboard text.');
+        status.className = found.length ? 'warn' : (text ? 'ok' : '');
+        if (window.crypto && window.crypto.subtle && text) {
+          window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (digest) {
+            hashLabel.textContent = Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+          }).catch(function () { hashLabel.textContent = 'unavailable'; });
+        } else hashLabel.textContent = text ? 'unavailable' : '—';
+      }
+
+      editor.addEventListener('input', inspect);
+      editor.addEventListener('paste', function () { setTimeout(inspect, 0); });
+      document.getElementById('pasteClipboard').addEventListener('click', function () {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          status.textContent = 'Clipboard read is unavailable here. Paste with Ctrl+V / ⌘V into the field.';
+          return;
+        }
+        navigator.clipboard.readText().then(function (text) { editor.value = text; inspect(); editor.focus(); }).catch(function () {
+          status.textContent = 'Clipboard permission was denied. Paste with Ctrl+V / ⌘V into the field.';
+        });
+      });
+      document.getElementById('clearText').addEventListener('click', function () { editor.value = ''; inspect(); editor.focus(); });
+      document.getElementById('downloadText').addEventListener('click', function () {
+        var blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob), link = document.createElement('a');
+        link.href = url; link.download = 'storiesai-clipboard-payload.txt';
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+      inspect();
+    })();
+  </script>
+</body>
+</html>
