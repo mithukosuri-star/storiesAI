@@ -1,4 +1,4 @@
-# storiesAI — a bedtime fairy tale PWA
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/mithukosuri-star/storiesAI?utm_source=oss&utm_medium=github&utm_campaign=mithukosuri-star%2FstoriesAI&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)# storiesAI — a bedtime fairy tale PWA
 
 **storiesAI** is an installable, offline-first progressive web app that writes a fresh, personalized
 bedtime story for a child: name, age, value, place, mood → one gentle tale with music, tappable
