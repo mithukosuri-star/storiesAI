@@ -1,0 +1,66 @@
+{
+  "dateUtc": "2026-11-09",
+  "browser": "HeadlessChrome/153.0.8010.0",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "story": {
+    "id": "story-mw9gp0wz-3umy",
+    "title": "Font QA Hero and the Cozy Forest at Bedtime",
+    "source": "offline",
+    "savedInLocalStorage": true
+  },
+  "method": "Read getComputedStyle(document.querySelector('#reader .chapter .prose')).fontSize while clicking the reader controls; verify the saved settings value, reopen the story from the library, and reload the story route at each endpoint.",
+  "initial": {
+    "computedFontSize": "20px",
+    "readerVariable": "20px",
+    "storedFontSize": 20
+  },
+  "minimum": {
+    "control": "#fontMinus",
+    "clickTraceFrom20px": ["18px", "16px", "15px", "15px", "15px"],
+    "atBound": {
+      "computedFontSize": "15px",
+      "readerVariable": "15px",
+      "storedFontSize": 15
+    },
+    "afterReopeningSavedStory": {
+      "computedFontSize": "15px",
+      "readerVariable": "15px",
+      "storedFontSize": 15
+    },
+    "afterReload": {
+      "computedFontSize": "15px",
+      "readerVariable": "15px",
+      "storedFontSize": 15
+    }
+  },
+  "maximum": {
+    "control": "#fontPlus",
+    "clickTraceFrom15px": ["17px", "19px", "21px", "23px", "25px", "27px", "28px", "28px", "28px", "28px"],
+    "atBound": {
+      "computedFontSize": "28px",
+      "readerVariable": "28px",
+      "storedFontSize": 28
+    },
+    "afterReopeningSavedStory": {
+      "computedFontSize": "28px",
+      "readerVariable": "28px",
+      "storedFontSize": 28
+    },
+    "afterReload": {
+      "computedFontSize": "28px",
+      "readerVariable": "28px",
+      "storedFontSize": 28
+    }
+  },
+  "checks": {
+    "minimumBoundComputed": true,
+    "maximumBoundComputed": true,
+    "minimumPersistsAfterReopenAndReload": true,
+    "maximumPersistsAfterReopenAndReload": true,
+    "boundaryClicksRemainClamped": true,
+    "result": "PASS"
+  }
+}
