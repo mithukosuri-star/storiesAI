@@ -7,6 +7,10 @@
   var $ = function (s, root) { return (root || document).querySelector(s); };
   var $$ = function (s, root) { return Array.prototype.slice.call((root || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+  var MAX_CHAPTER_NUMBER = 10000;
+  function isValidChapterNumber(value) {
+    return Number.isSafeInteger(value) && value > 0 && value <= MAX_CHAPTER_NUMBER;
+  }
 
   /* one stable invite code per device (never regenerate on each load) */
   var DEVICE_CODE = (function () {
@@ -796,7 +800,7 @@
       '<h1>' + esc(story.title) + '</h1><div class="cover-meta">' +
       '<span class="pill">' + esc(label('age', story.cfg.age)) + '</span><span class="pill">' + esc(String(story.cfg.customValue || '').trim() || label('value', story.cfg.value)) + '</span>' +
       '<span class="pill">' + esc(String(story.cfg.customPlace || '').trim() || s.label) + '</span><span class="pill">' + esc(lang.native) + '</span>' +
-      (story.cfg.type === 'series' ? '<span class="pill">Chapter ' + (story.chapterNumber || 1) + '</span>' : '') + '</div></div></div>' +
+      (story.cfg.type === 'series' ? '<span class="pill">Chapter ' + esc(story.chapterNumber || 1) + '</span>' : '') + '</div></div></div>' +
       (story.fallbackNotice ? '<div class="notice">' + esc(story.fallbackNotice) + '</div>' : '') +
       '<div class="reader-toolbar">' +
       '<button class="tool-btn" id="musicToggle">' + (A.isMusicOn() ? '♫ Music on' : '♫ Music') + '</button>' +
@@ -972,7 +976,7 @@
         var st = findSetting(s.cfg.setting), md = findMood(s.cfg.mood);
         return '<div class="story-card" data-open="' + esc(s.id) + '" role="button" tabindex="0">' +
           '<div class="cover" style="--c1:' + st.sky[0] + ';--c2:' + st.sky[1] + '">' + scenery(st, md, true) + '<span class="em">' + st.emoji + '</span></div>' +
-          '<div class="body"><h4>' + esc(s.title) + '</h4><div class="meta">' + esc(String(s.cfg.customValue || '').trim() || label('value', s.cfg.value)) + ' · ' + esc(label('age', s.cfg.age)) + '<br>' + esc(prettyDate(s.createdAt)) + (s.cfg.type === 'series' ? ' · Chapter ' + (s.chapterNumber || 1) : '') + '</div></div>' +
+          '<div class="body"><h4>' + esc(s.title) + '</h4><div class="meta">' + esc(String(s.cfg.customValue || '').trim() || label('value', s.cfg.value)) + ' · ' + esc(label('age', s.cfg.age)) + '<br>' + esc(prettyDate(s.createdAt)) + (s.cfg.type === 'series' ? ' · Chapter ' + esc(s.chapterNumber || 1) : '') + '</div></div>' +
           '<div class="foot"><span>' + esc((D.LANGUAGES.filter(function (l) { return l.id === s.cfg.language; })[0] || D.LANGUAGES[0]).label) + ' · ' + (s.source === 'ai' ? 'AI' : 'offline') + '</span><button data-del="' + esc(s.id) + '">Remove</button></div></div>';
       }).join('');
     }
@@ -1017,9 +1021,16 @@
         try {
           var data = JSON.parse(reader.result), incoming = data.stories || [];
           if (!Array.isArray(incoming)) throw new Error('bad file');
-          var ids = {}; S.stories.forEach(function (s) { ids[s.id] = 1; });
+          var ids = Object.create(null); S.stories.forEach(function (s) { ids[s.id] = 1; });
           var added = 0;
-          incoming.forEach(function (s) { if (s && s.id && !ids[s.id] && Array.isArray(s.chapters)) { S.stories.push(s); ids[s.id] = 1; added++; } });
+          incoming.forEach(function (s) {
+            if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !Array.isArray(s.chapters)) return;
+            /* Older backups may omit this field; treat those as chapter one. Reject
+               supplied values unless they are bounded, positive safe integers. */
+            if (!Object.prototype.hasOwnProperty.call(s, 'chapterNumber')) s.chapterNumber = 1;
+            if (!isValidChapterNumber(s.chapterNumber)) return;
+            S.stories.push(s); ids[s.id] = 1; added++;
+          });
           S.stories.sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
           save(); renderLibrary(); toast('Imported ' + added + ' story' + (added === 1 ? '' : 'ies'));
         } catch (err) { toast('That file is not a storiesAI backup'); }
