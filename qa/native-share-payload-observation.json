@@ -1,0 +1,47 @@
+{
+  "storyId": "story-mw9gb5ms-4gze",
+  "source": "offline",
+  "method": "saved localStorage story -> shareStory -> captured navigator.share options (mock recipient)",
+  "recipientDeviceAvailable": false,
+  "title": "Share QA Hero and the Golden Moss Path",
+  "text": "Share QA Hero and the Golden Moss Path\n\nWhere the quiet begins\nAt exactly half past bedtime, Share QA Hero discovered that the window had grown a staircase made of moonlight. Past three clouds and a yawning star, Share QA Hero arrived at the whispering forest, where trees that kept the moonlight in their pockets. Ting-ting-ting went the bells, entirely out of tune but very pleased. The air went whoosh and smelled faintly of warm biscuits. the whispering forest was having a very busy evening: trees that kept the moonlight in their pockets.\n\nA small muddle\na moss-green hedgehog was trying to fix a lantern made of a hollow acorn with a spoon. \"Need a hand?\" asked Share QA Hero. There was a problem: the path had been folded up and put away for the night. A creeeeak came from somewhere behind a very innocent-looking door. Instead of grumbling, Share QA Hero asked a question first. That turned out to be kindness. Ping! A star fell into a pocket and pretended it belonged there.\n\nOne small step\n\"We can do it together,\" said Share QA Hero. kindness, it seems, works faster in pairs. Ting! The lost thing was found, and the found thing was shared. Ping! A star fell into a pocket and pretended it belonged there. Everything unfolded at once, including a small shadow with big ideas, who apologised and handed back the moonlight. Share QA Hero nearly gave up, then tried a completely silly idea. That is kindness with a hat on.\n\nSoftly, softly\nThe staircase landed in the whispering forest, where trees that kept the moonlight in their pockets. Honestly, it was a bit odd. A creeeeak came from somewhere behind a very innocent-looking door. It took three tries and one deep breath. kindness is a small thing that grows — and Share QA Hero understood it. \"Well,\" said a moss-green hedgehog, \"that was the best sort of muddle.\" Bum-ti-tum went a small drum. The air went whoosh and smelled faintly of warm biscuits.\n\nUntil tomorrow night\nThe staircase folded itself neatly back into the window. The staircase landed in the whispering forest, where trees that kept the moonlight in their pockets. Honestly, it was a bit odd. Ting-ting-ting went the bells, entirely out of tune but very pleased. Close your eyes — the adventure is only pretending to be finished. Tomorrow the door might be somewhere else entirely. But now: goodnight, Share QA Hero.\n\n— made with storiesAI ✦",
+  "chapters": [
+    {
+      "chapter": 1,
+      "title": "Where the quiet begins",
+      "visibleTextChars": 481,
+      "sha256": "7af08f490bc51f81c562db85a2286a34b9090b6fccafda3eb6fd471476675b3c"
+    },
+    {
+      "chapter": 2,
+      "title": "A small muddle",
+      "visibleTextChars": 424,
+      "sha256": "d83647ab7524e1b5dcb0670056fbedec56d1b9eab8426cda5b6750a5bcc5009d"
+    },
+    {
+      "chapter": 3,
+      "title": "One small step",
+      "visibleTextChars": 430,
+      "sha256": "d6735612c592b4ed82d5d95a1c1c536b842fdebfed7caba91bc886e01de17c4e"
+    },
+    {
+      "chapter": 4,
+      "title": "Softly, softly",
+      "visibleTextChars": 469,
+      "sha256": "59a918034bd9da77ddf143d2b30cc77ddcfc49cf4dc404dda708c334f7c9b8bd"
+    },
+    {
+      "chapter": 5,
+      "title": "Until tomorrow night",
+      "visibleTextChars": 409,
+      "sha256": "851ccaac33a824c1641d89e55f708f1a81b225ffbe2a413a1a06b350897999fc"
+    }
+  ],
+  "checks": {
+    "shareApiCalled": true,
+    "titleMatches": true,
+    "allChaptersIncluded": true,
+    "noHtmlTags": true,
+    "noSoundTokens": true
+  }
+}
