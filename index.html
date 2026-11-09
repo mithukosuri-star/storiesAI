@@ -740,7 +740,7 @@ body.is-offline .offline-badge{display:block}
           <div class="roman">I · THE HERO</div>
           <h3 class="display-sm">What is <span class="gold-script">their name?</span></h3>
           <p class="quiet">More than one hero? Separate names with a comma or “and” — they will all be in the story.</p>
-          <div class="field"><label>NAME(S)</label><input class="input" id="namesInput" placeholder="e.g. Riya and Kabir" autocomplete="off"></div>
+          <div class="field"><label>NAME(S)</label><input class="input" id="namesInput" maxlength="160" placeholder="e.g. Riya and Kabir" autocomplete="off"></div>
           <div class="field"><label>WHAT SHALL WE WRITE?</label><div class="choice-grid" id="choiceType" style="grid-template-columns:repeat(2,1fr)"></div></div>
         </div>
         <div class="step" data-step="1">
@@ -1518,6 +1518,10 @@ window.CAudio = (function () {
 /* storiesAI — local story weaving engine + optional bring-your-own AI endpoint. */
 window.CEngine = (function () {
   var D = window.CDATA;
+  var MAX_NAME_LENGTH = 160;
+  function isValidNames(value) {
+    return value == null || (typeof value === 'string' && value.length <= MAX_NAME_LENGTH);
+  }
 
   /* deterministic-ish PRNG so the same inputs still give a fresh tale each night */
   function rng(seed) {
@@ -1538,8 +1542,9 @@ window.CEngine = (function () {
   function pick(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
 
   function namesOf(cfg) {
-    var raw = (cfg.names || 'a little dreamer').trim();
-    var parts = raw.split(/\s*(?:,|\band\b|\bor\b|&|;|\+|\/)\s*/i).map(function (s) { return s.trim(); }).filter(Boolean);
+    var input = cfg && cfg.names;
+    var raw = (typeof input === 'string' && input ? input : 'a little dreamer').slice(0, MAX_NAME_LENGTH);
+    var parts = raw.split(/,|\band\b|\bor\b|&|;|\+|\//i).map(function (s) { return s.trim(); }).filter(Boolean);
     if (!parts.length) parts = ['a little dreamer'];
     return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] };
   }
@@ -1818,6 +1823,8 @@ window.CEngine = (function () {
   }
 
   function generate(cfg, ai) {
+    if (!cfg || typeof cfg !== 'object') return Promise.reject(new Error('Story settings are invalid'));
+    if (!isValidNames(cfg.names)) return Promise.reject(new Error('Hero names must be ' + MAX_NAME_LENGTH + ' characters or fewer'));
     if (ai && ai.enabled && ai.endpoint) {
       return generateAI(cfg, ai).catch(function (e) {
         var story = weaveOffline(cfg);
@@ -1845,7 +1852,10 @@ window.CEngine = (function () {
     return String(raw).replace(/\[\[(\w+)\|([^\]]+)\]\]/g, function (m, k, w) { return w; });
   }
 
-  return { generate: generate, renderText: renderText, plainText: plainText, namesOf: namesOf, aiPrompt: aiPrompt };
+  return {
+    generate: generate, renderText: renderText, plainText: plainText, namesOf: namesOf, aiPrompt: aiPrompt,
+    MAX_NAME_LENGTH: MAX_NAME_LENGTH, isValidNames: isValidNames
+  };
 })();
 
 /* ===== src/stars.js ===== */
@@ -3295,6 +3305,7 @@ window.CCursor = (function () {
 (function () {
   'use strict';
   var D = window.CDATA, A = window.CAudio, E = window.CEngine;
+  var MAX_NAME_LENGTH = E.MAX_NAME_LENGTH;
   var KEY = 'storiesai.v1';
   try { if (!localStorage.getItem(KEY) && localStorage.getItem('chandni.v1')) localStorage.setItem(KEY, localStorage.getItem('chandni.v1')); } catch (e) {}
   var $ = function (s, root) { return (root || document).querySelector(s); };
@@ -4001,6 +4012,9 @@ window.CCursor = (function () {
   }
   function createStory(overrideCfg) {
     var cfg = overrideCfg || JSON.parse(JSON.stringify(S.wizard));
+    if (!E.isValidNames(cfg.names)) {
+      location.hash = '#/create'; toast('Hero names must be ' + MAX_NAME_LENGTH + ' characters or fewer'); return;
+    }
     if (!cfg.names || !cfg.names.trim()) { location.hash = '#/create'; toast('First, give the hero a name ✦'); return; }
     if (S.stars < 1) { addStarsModal('Your pouch is empty'); return; }
     A.stopSpeak(); reading = false;
@@ -4318,6 +4332,7 @@ window.CCursor = (function () {
           var added = 0;
           incoming.forEach(function (s) {
             if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !Array.isArray(s.chapters)) return;
+            if (!E.isValidNames(s.cfg.names)) return;
             /* Older backups may omit this field; treat those as chapter one. Reject
                supplied values unless they are bounded, positive safe integers. */
             if (!Object.prototype.hasOwnProperty.call(s, 'chapterNumber')) s.chapterNumber = 1;

@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var D = window.CDATA, A = window.CAudio, E = window.CEngine;
+  var MAX_NAME_LENGTH = E.MAX_NAME_LENGTH;
   var KEY = 'storiesai.v1';
   try { if (!localStorage.getItem(KEY) && localStorage.getItem('chandni.v1')) localStorage.setItem(KEY, localStorage.getItem('chandni.v1')); } catch (e) {}
   var $ = function (s, root) { return (root || document).querySelector(s); };
@@ -708,6 +709,9 @@
   }
   function createStory(overrideCfg) {
     var cfg = overrideCfg || JSON.parse(JSON.stringify(S.wizard));
+    if (!E.isValidNames(cfg.names)) {
+      location.hash = '#/create'; toast('Hero names must be ' + MAX_NAME_LENGTH + ' characters or fewer'); return;
+    }
     if (!cfg.names || !cfg.names.trim()) { location.hash = '#/create'; toast('First, give the hero a name ✦'); return; }
     if (S.stars < 1) { addStarsModal('Your pouch is empty'); return; }
     A.stopSpeak(); reading = false;
@@ -1025,6 +1029,7 @@
           var added = 0;
           incoming.forEach(function (s) {
             if (!s || !s.id || ids[s.id] || !s.cfg || typeof s.cfg !== 'object' || Array.isArray(s.cfg) || !Array.isArray(s.chapters)) return;
+            if (!E.isValidNames(s.cfg.names)) return;
             /* Older backups may omit this field; treat those as chapter one. Reject
                supplied values unless they are bounded, positive safe integers. */
             if (!Object.prototype.hasOwnProperty.call(s, 'chapterNumber')) s.chapterNumber = 1;

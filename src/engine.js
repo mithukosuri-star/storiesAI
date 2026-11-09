@@ -1,6 +1,10 @@
 /* storiesAI — local story weaving engine + optional bring-your-own AI endpoint. */
 window.CEngine = (function () {
   var D = window.CDATA;
+  var MAX_NAME_LENGTH = 160;
+  function isValidNames(value) {
+    return value == null || (typeof value === 'string' && value.length <= MAX_NAME_LENGTH);
+  }
 
   /* deterministic-ish PRNG so the same inputs still give a fresh tale each night */
   function rng(seed) {
@@ -21,8 +25,9 @@ window.CEngine = (function () {
   function pick(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
 
   function namesOf(cfg) {
-    var raw = (cfg.names || 'a little dreamer').trim();
-    var parts = raw.split(/\s*(?:,|\band\b|\bor\b|&|;|\+|\/)\s*/i).map(function (s) { return s.trim(); }).filter(Boolean);
+    var input = cfg && cfg.names;
+    var raw = (typeof input === 'string' && input ? input : 'a little dreamer').slice(0, MAX_NAME_LENGTH);
+    var parts = raw.split(/,|\band\b|\bor\b|&|;|\+|\//i).map(function (s) { return s.trim(); }).filter(Boolean);
     if (!parts.length) parts = ['a little dreamer'];
     return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] };
   }
@@ -301,6 +306,8 @@ window.CEngine = (function () {
   }
 
   function generate(cfg, ai) {
+    if (!cfg || typeof cfg !== 'object') return Promise.reject(new Error('Story settings are invalid'));
+    if (!isValidNames(cfg.names)) return Promise.reject(new Error('Hero names must be ' + MAX_NAME_LENGTH + ' characters or fewer'));
     if (ai && ai.enabled && ai.endpoint) {
       return generateAI(cfg, ai).catch(function (e) {
         var story = weaveOffline(cfg);
@@ -328,5 +335,8 @@ window.CEngine = (function () {
     return String(raw).replace(/\[\[(\w+)\|([^\]]+)\]\]/g, function (m, k, w) { return w; });
   }
 
-  return { generate: generate, renderText: renderText, plainText: plainText, namesOf: namesOf, aiPrompt: aiPrompt };
+  return {
+    generate: generate, renderText: renderText, plainText: plainText, namesOf: namesOf, aiPrompt: aiPrompt,
+    MAX_NAME_LENGTH: MAX_NAME_LENGTH, isValidNames: isValidNames
+  };
 })();
