@@ -1,0 +1,83 @@
+{
+  "storyId": "story-mw9fxwig-ks1d",
+  "source": "offline",
+  "method": "offline engine + reader route before/after fresh app runtime using retained localStorage",
+  "totalChapters": 5,
+  "chapters": [
+    {
+      "chapter": 1,
+      "title": "A door made of evening",
+      "beforeReload": {
+        "chars": 481,
+        "sha256": "faa29ce8cf434d6eb4ff4706eaa2b04629a899d515eb4403abbbf9516df40e1d",
+        "text": "There are nights when a sock disappears. On this night, Reader Check found where socks go. Past three clouds and a yawning star, Reader Check arrived at the whispering forest, where trees that kept the moonlight in their pockets. The air went whoosh and smelled faintly of warm biscuits. Ping! A star fell into a pocket and pretended it belonged there. The staircase landed in the whispering forest, where trees that kept the moonlight in their pockets. Honestly, it was a bit odd."
+      },
+      "afterReload": {
+        "chars": 481,
+        "sha256": "faa29ce8cf434d6eb4ff4706eaa2b04629a899d515eb4403abbbf9516df40e1d",
+        "text": "There are nights when a sock disappears. On this night, Reader Check found where socks go. Past three clouds and a yawning star, Reader Check arrived at the whispering forest, where trees that kept the moonlight in their pockets. The air went whoosh and smelled faintly of warm biscuits. Ping! A star fell into a pocket and pretended it belonged there. The staircase landed in the whispering forest, where trees that kept the moonlight in their pockets. Honestly, it was a bit odd."
+      },
+      "identical": true
+    },
+    {
+      "chapter": 2,
+      "title": "Someone to ask",
+      "beforeReload": {
+        "chars": 464,
+        "sha256": "22fb192bca4276016903c19953ac0d5256adc13345aae955fda464e177cc1a8b",
+        "text": "a moss-green hedgehog was trying to fix a lantern made of a hollow acorn with a spoon. \"Need a hand?\" asked Reader Check. Then the whole place hiccupped. a lantern made of a hollow acorn spun round twice and stopped, upside down. A creeeeak came from somewhere behind a very innocent-looking door. Reader Check nearly gave up, then tried a completely silly idea. That is kindness with a hat on. Ting-ting-ting went the bells, entirely out of tune but very pleased."
+      },
+      "afterReload": {
+        "chars": 464,
+        "sha256": "22fb192bca4276016903c19953ac0d5256adc13345aae955fda464e177cc1a8b",
+        "text": "a moss-green hedgehog was trying to fix a lantern made of a hollow acorn with a spoon. \"Need a hand?\" asked Reader Check. Then the whole place hiccupped. a lantern made of a hollow acorn spun round twice and stopped, upside down. A creeeeak came from somewhere behind a very innocent-looking door. Reader Check nearly gave up, then tried a completely silly idea. That is kindness with a hat on. Ting-ting-ting went the bells, entirely out of tune but very pleased."
+      },
+      "identical": true
+    },
+    {
+      "chapter": 3,
+      "title": "The quiet choice",
+      "beforeReload": {
+        "chars": 429,
+        "sha256": "b124fbc84cfd92ffa142b8be8b3248a6050a085bdb76197643f3a2358ac7a98d",
+        "text": "\"We can do it together,\" said Reader Check. kindness, it seems, works faster in pairs. \"Well,\" said a moss-green hedgehog, \"that was the best sort of muddle.\" Bum-ti-tum went a small drum. Ping! A star fell into a pocket and pretended it belonged there. Ting! The lost thing was found, and the found thing was shared. It took three tries and one deep breath. kindness is a small thing that grows — and Reader Check understood it."
+      },
+      "afterReload": {
+        "chars": 429,
+        "sha256": "b124fbc84cfd92ffa142b8be8b3248a6050a085bdb76197643f3a2358ac7a98d",
+        "text": "\"We can do it together,\" said Reader Check. kindness, it seems, works faster in pairs. \"Well,\" said a moss-green hedgehog, \"that was the best sort of muddle.\" Bum-ti-tum went a small drum. Ping! A star fell into a pocket and pretended it belonged there. Ting! The lost thing was found, and the found thing was shared. It took three tries and one deep breath. kindness is a small thing that grows — and Reader Check understood it."
+      },
+      "identical": true
+    },
+    {
+      "chapter": 4,
+      "title": "Everything in its place",
+      "beforeReload": {
+        "chars": 434,
+        "sha256": "07825d38e48396c066422fee04baed914ae120750c830b57dbb45547931fdc1a",
+        "text": "the whispering forest was having a very busy evening: trees that kept the moonlight in their pockets. A creeeeak came from somewhere behind a very innocent-looking door. Instead of grumbling, Reader Check asked a question first. That turned out to be kindness. Everything unfolded at once, including a sleepy troll with cold feet, who apologised and handed back the moonlight. The air went whoosh and smelled faintly of warm biscuits."
+      },
+      "afterReload": {
+        "chars": 434,
+        "sha256": "07825d38e48396c066422fee04baed914ae120750c830b57dbb45547931fdc1a",
+        "text": "the whispering forest was having a very busy evening: trees that kept the moonlight in their pockets. A creeeeak came from somewhere behind a very innocent-looking door. Instead of grumbling, Reader Check asked a question first. That turned out to be kindness. Everything unfolded at once, including a sleepy troll with cold feet, who apologised and handed back the moonlight. The air went whoosh and smelled faintly of warm biscuits."
+      },
+      "identical": true
+    },
+    {
+      "chapter": 5,
+      "title": "The blanket and the moon",
+      "beforeReload": {
+        "chars": 375,
+        "sha256": "e8da1cc33108382f7b1f5656c080a0e59b14717ee556b9951454414a8a98bfb4",
+        "text": "The staircase folded itself neatly back into the window. the whispering forest was having a very busy evening: trees that kept the moonlight in their pockets. Ting-ting-ting went the bells, entirely out of tune but very pleased. Tomorrow the door might be somewhere else entirely. But now: goodnight, Reader Check. The blanket settled. The room went shhh. Sleep won, quietly."
+      },
+      "afterReload": {
+        "chars": 375,
+        "sha256": "e8da1cc33108382f7b1f5656c080a0e59b14717ee556b9951454414a8a98bfb4",
+        "text": "The staircase folded itself neatly back into the window. the whispering forest was having a very busy evening: trees that kept the moonlight in their pockets. Ting-ting-ting went the bells, entirely out of tune but very pleased. Tomorrow the door might be somewhere else entirely. But now: goodnight, Reader Check. The blanket settled. The room went shhh. Sleep won, quietly."
+      },
+      "identical": true
+    }
+  ]
+}
