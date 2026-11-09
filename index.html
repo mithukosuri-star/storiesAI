@@ -905,6 +905,40 @@ window.CDATA = (function () {
     { id: 'farm',    emoji: '🌾', label: 'Cheerful Farm',     scene: 'farm',     sky: ['#1d2233','#5a4a3c'], accent: '#f6d28c', place: 'a farm where the hay smelled of biscuits', detail: 'a barn roof that collected falling stars', friend: 'a hen who counted sheep', thing: 'a little wooden cart with one loose wheel' }
   ];
 
+  /* Built-in story scenery, friends and objects translated separately from UI labels. */
+  const SETTING_NARRATIVES = {
+    hi: {
+      forest: { place: 'फुसफुसाते जंगल', detail: 'ऐसे पेड़ जो चाँदनी को अपनी जेबों में रखते थे', friend: 'काई-सा हरा नन्हा साही', thing: 'खोखले बलूत से बना एक दीपक' },
+      castle: { place: 'शांत कदमों से चलने वाले किले', detail: 'ऐसी मीनारें जो हर शाम अपना मन बदल लेती थीं', friend: 'बिस्कुट से बना एक नन्हा शूरवीर', thing: 'दयालुता पर गुनगुनाने वाली एक चाबी' },
+      island: { place: 'हल्की पेंसिल से बने रहस्यमय द्वीप', detail: 'ऐसी सीपियाँ जो हर ज्वार को याद रखती थीं', friend: 'पीठ पर नक्शा लिए एक केकड़ा', thing: 'एक बोतल में रखी अधूरी इच्छा' },
+      space: { place: 'आकाश के मुलायम किनारे', detail: 'ऐसे तारे जिन्हें गिनती पसंद थी', friend: 'ऊँघता हुआ एक धूमकेतु', thing: 'बची हुई चाँदनी की एक शीशी' },
+      city: { place: 'दीपकों के शुभ संध्या कहने वाले जादुई शहर', detail: 'लोरी की धुन पर चलने वाली ट्रामें', friend: 'गरम बादल बेचने वाला एक रोटीवाला', thing: 'दोस्तों के लिए ही बजने वाली एक घंटी' },
+      mountain: { place: 'बादलों के ऊपर वाले पुराने पहाड़', detail: 'ऐसे पत्थर जो बहुत धीरे-धीरे चुटकुले सुनाते थे', friend: 'ऊन का दुपट्टा पहने एक याक', thing: 'एक घंटी जिसे हवा भी नहीं बजा सकती थी' },
+      sea: { place: 'ज्वार के रहस्य सँभालने वाली मूंगे की चट्टान', detail: 'पानी हिलने पर छनकने वाले मूंगे', friend: 'एक शर्मीली चाँदी-सी मछली', thing: 'एक मोती जिसके भीतर छोटा-सा गीत था' },
+      glacier: { place: 'भीतर से जगमगाते हिमनद', detail: 'ऐसे हिमकण जिनमें हर एक का अलग नाम था', friend: 'गरम पंजों वाली एक सफेद लोमड़ी', thing: 'सूर्योदय की किरणों से बुना एक मफलर' },
+      school: { place: 'केवल रात में खुलने वाले अनोखे विद्यालय', detail: 'ऐसे श्यामपट जो जम्हाई लेकर खुद को मिटा देते थे', friend: 'अंकगणित सिखाने वाला एक उल्लू', thing: 'एक पेंसिल जो तुम्हारे विचार बना देती थी' },
+      park: { place: 'सबके जाने के बाद जादू से भरने वाले खेल के मैदान', detail: 'एक फिसलपट्टी जो हर बार नई जगह पहुँचाती थी', friend: 'सुर में गुनगुनाता एक झूला', thing: 'एक गेंद जो हमेशा तुम्हारे पास लौट आती थी' },
+      ship: { place: 'सोने के बादलों की पालों वाले जहाज़', detail: 'जहाज़ का फर्श पालने की तरह झूलता था', friend: 'सभी लोरियाँ जानने वाला एक समुद्री पक्षी', thing: 'घर की दिशा बताने वाला एक यंत्र' },
+      treehouse: { place: 'सोते हुए बगीचे के ऊपर बने गुप्त पेड़घर', detail: 'ऐसी सीढ़ियाँ जिन पर हर रात एक नया पायदान उग आता था', friend: 'तारों की रोशनी में पढ़ने वाला एक पतंगा', thing: 'गर्मियों की यादें सँभालने वाली एक शीशी' },
+      farm: { place: 'घास में बिस्कुट की महक वाले खुशहाल खेत', detail: 'खलिहान की छत जो टूटते तारों को जमा करती थी', friend: 'भेड़ें गिनने वाली एक मुर्गी', thing: 'एक छोटी लकड़ी की गाड़ी जिसका एक पहिया ढीला था' }
+    },
+    bn: {
+      forest: { place: 'ফিসফিসে বন', detail: 'এমন গাছ, যারা চাঁদের আলো পকেটে জমিয়ে রাখত', friend: 'শ্যাওলা-সবুজ এক ছোট্ট সজারু', thing: 'ফাঁপা ওক-ফল দিয়ে বানানো এক ছোট্ট প্রদীপ' },
+      castle: { place: 'নীরব পায়ে হেঁটে বেড়াত এমন এক দুর্গ', detail: 'সন্ধ্যা হলেই মত বদলাত এমন মিনার', friend: 'বিস্কুট দিয়ে বানানো এক ছোট্ট বীর', thing: 'দয়ার ছোঁয়ায় গুনগুন করত এমন এক চাবি' },
+      island: { place: 'হালকা পেনসিলে আঁকা এক রহস্যময় দ্বীপ', detail: 'প্রতিটি জোয়ারের কথা মনে রাখত এমন ঝিনুক', friend: 'পিঠে মানচিত্র আঁকা এক কাঁকড়া', thing: 'বোতলে রাখা একটি অপূর্ণ ইচ্ছে' },
+      space: { place: 'আকাশের নরম কিনারা', detail: 'গুনে ফেলতে ভালোবাসত এমন তারা', friend: 'একটি ঘুমঘুম ধূমকেতু', thing: 'বেঁচে যাওয়া চাঁদের আলোভরা এক শিশি' },
+      city: { place: 'আলো যেখানে শুভসন্ধ্যা বলত এমন এক জাদুর শহর', detail: 'ঘুমপাড়ানি গানের সুরে চলত এমন ট্রাম', friend: 'গরম মেঘ বিক্রি করত এমন এক রুটিওয়ালা', thing: 'শুধু বন্ধুদের জন্য বাজত এমন এক ঘণ্টি' },
+      mountain: { place: 'মেঘের ওপরে প্রাচীন পাহাড়', detail: 'ধীরে ধীরে মজার কথা বলত এমন পাথর', friend: 'উলের মাফলার পরা এক ইয়াক', thing: 'হাওয়াও বাজাতে পারত না এমন এক ঘণ্টা' },
+      sea: { place: 'প্রবালপ্রাচীর, যেখানে জোয়ার তার গোপন কথা রাখে', detail: 'জল নড়লেই টুংটাং করত এমন প্রবাল', friend: 'একটি লাজুক রুপোলি মাছ', thing: 'ভেতরে ছোট্ট গান রাখা এক মুক্তো' },
+      glacier: { place: 'ভেতর থেকে আলো ছড়ানো এক হিমবাহ', detail: 'প্রতিটির আলাদা নাম ছিল এমন তুষারকণা', friend: 'উষ্ণ থাবার এক সাদা শিয়াল', thing: 'সূর্যোদয়ের আলো দিয়ে বোনা এক মাফলার' },
+      school: { place: 'শুধু রাতে খুলত এমন এক আশ্চর্য বিদ্যালয়', detail: 'হাই তুলে নিজে নিজে মুছে যেত এমন কালো ফলক', friend: 'অঙ্ক শেখাত এমন এক পেঁচা', thing: 'তোমার ভাবনা এঁকে দিত এমন একটি পেন্সিল' },
+      park: { place: 'সবাই চলে গেলে জাদু জাগত এমন এক খেলার মাঠ', detail: 'প্রতিবার নতুন জায়গায় পৌঁছে দিত এমন এক পিছলবার পথ', friend: 'সুর তুলে গুনগুন করত এমন এক দোলনা', thing: 'সবসময় তোমার কাছে ফিরে আসত এমন এক বল' },
+      ship: { place: 'ঘুমপাড়ানি মেঘের পাল-ওয়ালা এক জাহাজ', detail: 'জাহাজের মেঝে দোলনার মতো দুলত', friend: 'সব ঘুমপাড়ানি গান জানা এক সামুদ্রিক পাখি', thing: 'বাড়ির দিক দেখাত এমন এক দিক-নির্দেশক যন্ত্র' },
+      treehouse: { place: 'ঘুমন্ত বাগানের ওপরে এক গোপন গাছবাড়ি', detail: 'প্রতি রাতে নতুন একটি ধাপ গজিয়ে উঠত এমন সিঁড়ি', friend: 'তারার আলোয় পড়ত এমন এক নিশাচর প্রজাপতি', thing: 'গ্রীষ্মের স্মৃতি ধরে রাখা এক শিশি' },
+      farm: { place: 'আনন্দময় এক খামার, যেখানে শুকনো ঘাসে বিস্কুটের গন্ধ ছিল', detail: 'খামারঘরের ছাদ ঝরে-পড়া তারা জমিয়ে রাখত', friend: 'ভেড়া গুনত এমন এক মুরগি', thing: 'একটি ছোট কাঠের গাড়ি, যার একটি চাকা ঢিলা ছিল' }
+    }
+  };
+
   /* ---------- environment profiles ----------------------------------------
      Picking a place changes more than the sky tint: the horizon geometry and
      the movement of the particle field change with it. `ground` overrides the
@@ -1184,21 +1218,21 @@ window.CDATA = (function () {
 
   /* ---------- Hindi & Bengali banks ---------- simple, gentle, gender-neutral phrasing ---------- */
   const BANKS_HI = {
-    open: ['आज रात {name} ने आँखें खोलीं और चाँद मुस्कुराया।', 'कंबल गरम था, कमरा शांत था, और {name} तैयार था।', 'एक छोटी सी कहानी आज रात {name} के पास आई।'],
-    scene: ['रोशनी की एक पगडंडी {place} तक गई। वहाँ {detail}।', '{name} धीरे-धीरे {place} पहुँचा। चारों ओर बहुत शांति थी।', 'खिड़की के पार {place} था, और वहाँ {detail}।'],
+    open: ['आज रात {name} ने आँखें खोलीं और चाँद मुस्कुराया।', 'कंबल गरम था, कमरा शांत था — अब {name} के सोने का समय था।', 'एक छोटी सी कहानी आज रात {name} के पास आई।'],
+    scene: ['रोशनी की एक पगडंडी {place} तक गई। वहाँ {detail}।', '{name} के कदम धीरे-धीरे {place} की ओर बढ़े। चारों ओर बहुत शांति थी।', 'खिड़की के पार {place} का एक सुंदर नज़ारा था। वहाँ {detail}।'],
     wonder: ['[[wind|सरसर]] की आवाज़ आई, जैसे पत्ते बातें कर रहे हों।', 'एक छोटी सी [[bells|घंटी]] बजी — टिंग, टिंग।', 'ऊपर एक तारा [[twinkle|टिमटिमाया]]।', 'दूर से [[owl|उल्लू]] ने शुभ रात्रि कही।'],
     meet: ['वहाँ {friend} मिला, और उसके पास {thing} था।', '"चलो साथ चलें," {friend} ने धीरे से कहा।', '{friend} इंतज़ार कर रहा था, हाथ में {thing} लिए।'],
     trouble: ['तब पता चला कि छोटी सी रोशनी कहीं चली गई है।', 'रास्ते के बीच एक छोटी सी उलझन बैठी थी।', '{villain} ने चाँदनी छुपा ली थी — डर के मारे, बुराई से नहीं।'],
     value: ['{name} ने एक गहरी साँस ली और एक छोटा कदम आगे बढ़ाया। यही {value} है।', '{name} ने पहले सुना, फिर मदद की। {value} ऐसे ही बढ़ता है।', 'साथ मिलकर काम किया गया, और बोझ हल्का हो गया। यह {value} था।'],
     solve: ['रोशनी वापस आई, बिल्कुल धीरे-धीरे।', '[[bells|टिंग]]! सब कुछ अपनी जगह लौट आया।', '{villain} ने मुस्कुराकर चाँदनी वापस दे दी और शुक्रिया कहा।'],
-    home: ['उसी रोशनी की पगडंडी से {name} घर लौटा।', 'तारे दरवाज़े तक साथ आए।', 'कमरा वैसा ही था — गरम और अपना।'],
+    home: ['उसी रोशनी की पगडंडी {name} को घर तक ले आई।', 'तारे दरवाज़े तक साथ आए।', 'कमरा वैसा ही था — गरम और अपना।'],
     sleep: ['तकिया ठंडा था, कंबल कोमल था। शुभ रात्रि, {name}।', '[[whisper|श्श्श]], कमरे ने कहा। अब सो जाओ।', 'आँखें बंद करो। कहानी कल भी यहीं मिलेगी।'],
     questions: ['कहानी में सबसे अच्छा पल कौन सा था?', '{name} ने क्या सीखा?', 'कल तुम किसके साथ अच्छा बर्ताव करोगे?']
   };
 
   const BANKS_BN = {
     open: ['আজ রাতে {name} চোখ খুলল আর চাঁদ হাসল।', 'কম্বল গরম, ঘর নীরব, আর {name} প্রস্তুত।', 'একটি ছোট্ট গল্প আজ রাতে {name} এর কাছে এল।'],
-    scene: ['আলোর একটা ছোট্ট পথ {place} পর্যন্ত গেল। সেখানে {detail}।', '{name} আস্তে আস্তে {place} পৌঁছাল। চারদিক খুব শান্ত ছিল।', 'জানালার ওপারে ছিল {place}, আর সেখানে {detail}।'],
+    scene: ['আলোর একটা ছোট্ট পথ {place} পর্যন্ত গেল। সেখানে {detail}।', '{name} একটু এগিয়ে যেতেই সামনে দেখা দিল {place}। চারদিকে ছিল খুব শান্ত পরিবেশ।', 'জানালার ওপারে ছিল {place}, আর সেখানে {detail}।'],
     wonder: ['[[wind|সর সর]] শব্দ এল, যেন পাতারা ফিসফিস করছে।', 'একটি ছোট্ট [[bells|ঘণ্টা]] বাজল — টিং, টিং।', 'একটি তারা [[twinkle|মিটমিটে]] করে জ্বলল।', 'দূর থেকে [[owl|পেঁচা]] শুভরাত্রি বলল।'],
     meet: ['সেখানে {friend} এল, হাতে ছিল {thing}।', '"চলো একসঙ্গে যাই," {friend} আস্তে বলল।', '{friend} অপেক্ষা করছিল, কাছে {thing} নিয়ে।'],
     trouble: ['তখন দেখা গেল ছোট্ট আলোটা কোথাও চলে গেছে।', 'পথের মাঝখানে একটু জটিলতা বসে ছিল।', '{villain} চাঁদের আলো লুকিয়ে রেখেছিল — ভয় পেয়ে, খারাপ মনে নয়।'],
@@ -1231,7 +1265,7 @@ window.CDATA = (function () {
   ];
 
   return {
-    AGES: AGES, VALUES: VALUES, SETTINGS: SETTINGS, MOODS: MOODS, LENGTHS: LENGTHS,
+    AGES: AGES, VALUES: VALUES, SETTINGS: SETTINGS, SETTING_NARRATIVES: SETTING_NARRATIVES, MOODS: MOODS, LENGTHS: LENGTHS,
     LANGUAGES: LANGUAGES, VOICES: VOICES, SFX: SFX, SOUND_POOLS: SOUND_POOLS,
     BANKS: BANKS, BANKS_HI: BANKS_HI, BANKS_BN: BANKS_BN,
     ENVIRONMENTS: ENVIRONMENTS, ENV_BY_SCENE: ENV_BY_SCENE, ENV_FOR_SETTING: ENV_FOR_SETTING,
@@ -1561,16 +1595,27 @@ window.CEngine = (function () {
   function pick(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
 
   function namesOf(cfg) {
+    var lang = cfg && cfg.language;
     var input = cfg && cfg.names;
-    var raw = (typeof input === 'string' && input ? input : 'a little dreamer').slice(0, MAX_NAME_LENGTH);
+    var fallback = lang === 'hi' ? 'एक नन्हा स्वप्नदर्शी' : lang === 'bn' ? 'এক ছোট্ট স্বপ্নবাজ' : 'a little dreamer';
+    var conjunction = lang === 'hi' ? 'और' : lang === 'bn' ? 'আর' : 'and';
+    var raw = (typeof input === 'string' && input ? input : fallback).slice(0, MAX_NAME_LENGTH);
     var parts = raw.split(/,|\band\b|\bor\b|&|;|\+|\//i).map(function (s) { return s.trim(); }).filter(Boolean);
-    if (!parts.length) parts = ['a little dreamer'];
-    return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] };
+    if (!parts.length) parts = [fallback];
+    return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' ' + conjunction + ' ' + parts[parts.length - 1] : parts[0] };
   }
 
   var VILLAINS = [
     'a grumpy little cloud', 'a pocket-sized dragon', 'a moth who borrowed things',
     'a sleepy troll with cold feet', 'a fox who never said sorry', 'a small shadow with big ideas'
+  ];
+  var VILLAINS_HI = [
+    'रूठे हुए छोटे बादल', 'जेब में समा जाने वाले नन्हे अजगर', 'चीज़ें उधार लेने वाले पतंगे',
+    'ठंडे पैरों वाले उनींदे दैत्य', 'माफ़ी न माँगने वाली लोमड़ी', 'बड़े विचारों वाली छोटी परछाईं'
+  ];
+  var VILLAINS_BN = [
+    'গোমড়ামুখো ছোট্ট মেঘ', 'মুঠোভরা ছোট্ট এক ড্রাগন', 'জিনিস ধার নিতে ভালোবাসত এমন এক নিশাচর প্রজাপতি',
+    'ঠান্ডা পায়ের এক ঘুমকাতুরে দানব', 'কখনও ক্ষমা চাইত না এমন এক শিয়াল', 'বড় বড় ভাবনা ছিল এমন এক ছোট্ট ছায়া'
   ];
   var TITLE_NOUNS = {
     forest: ['Lantern', 'Whispering Tree', 'Moss Path'], castle: ['Humming Key', 'Walking Tower', 'Little Knight'],
@@ -1610,6 +1655,20 @@ window.CEngine = (function () {
     ['Everything in its place', 'The long way home', 'Softly, softly'],
     ['Goodnight, little star', 'The blanket and the moon', 'Until tomorrow night']
   ];
+  var CH_TITLES_HI = [
+    ['रोशनी की पगडंडी', 'साँझ का एक दरवाज़ा', 'जहाँ शांति शुरू होती है'],
+    ['एक छोटी-सी उलझन', 'किसी से पूछना', 'एक अनपेक्षित मेहमान'],
+    ['शांत मन से चुना', 'एक छोटा कदम', 'सबसे ज़रूरी बात'],
+    ['सब कुछ अपनी जगह', 'घर लौटने का लंबा रास्ता', 'धीरे-धीरे'],
+    ['शुभरात्रि, नन्हे तारे', 'कंबल और चाँद', 'कल फिर मिलेंगे']
+  ];
+  var CH_TITLES_BN = [
+    ['আলোর পথ', 'সন্ধ্যার তৈরি এক দরজা', 'যেখানে নীরবতা শুরু'],
+    ['ছোট্ট এক জটিলতা', 'কাউকে জিজ্ঞেস করা', 'অপ্রত্যাশিত অতিথি'],
+    ['শান্ত এক সিদ্ধান্ত', 'একটি ছোট্ট পদক্ষেপ', 'যেটা সবচেয়ে জরুরি'],
+    ['সবকিছু নিজের জায়গায়', 'বাড়ি ফেরার দীর্ঘ পথ', 'ধীরে ধীরে'],
+    ['শুভরাত্রি, ছোট্ট তারা', 'কম্বল আর চাঁদ', 'আগামীকাল আবার দেখা হবে']
+  ];
 
   var VOICE_MAPS = {
     gentle:      ['green', 'blue', 'green', 'yellow', 'green'],
@@ -1630,6 +1689,9 @@ window.CEngine = (function () {
        keeps the preset's scenery, friends and objects so the prose still works */
     var setting = D.SETTINGS.filter(function (s) { return s.id === cfg.setting; })[0] || D.SETTINGS[0];
     var value = D.VALUES.filter(function (v) { return v.id === cfg.value; })[0] || D.VALUES[0];
+    var settingLocale = D.SETTING_NARRATIVES && D.SETTING_NARRATIVES[cfg.language];
+    var localizedSetting = settingLocale && settingLocale[setting.id];
+    if (localizedSetting) setting = Object.assign({}, setting, localizedSetting);
     var cp = String(cfg.customPlace || '').trim();
     var cv = String(cfg.customValue || '').trim();
     if (cp) {
@@ -1650,10 +1712,11 @@ window.CEngine = (function () {
     var trans = D.VALUE_TRANSLATIONS[value.id] || { en: value.label.toLowerCase(), hi: value.hi, bn: value.bn };
     var lang = cfg.language || 'en';
     var names = namesOf(cfg);
-    var villain = cfg.villain ? (cfg.villainText || pick(r, VILLAINS)) : '';
+    var villainPool = lang === 'hi' ? VILLAINS_HI : lang === 'bn' ? VILLAINS_BN : VILLAINS;
+    var villain = cfg.villain ? (cfg.villainText || pick(r, villainPool)) : '';
     return {
       name: names.text,
-      place: cfg.language === 'hi' ? 'उस शांत जगह' : cfg.language === 'bn' ? 'সেই শান্ত জায়গা' : setting.place,
+      place: setting.place,
       detail: setting.detail,
       friend: setting.friend,
       thing: setting.thing,
@@ -1693,11 +1756,13 @@ window.CEngine = (function () {
     }
 
     var voiceMap = VOICE_MAPS[cfg.mood] || VOICE_MAPS.gentle;
+    var titleBank = cfg.language === 'hi' ? CH_TITLES_HI : cfg.language === 'bn' ? CH_TITLES_BN : CH_TITLES;
+    var chapterLabel = cfg.language === 'hi' ? 'अध्याय ' : cfg.language === 'bn' ? 'অধ্যায় ' : 'Chapter ';
     var chapters = recipe.map(function (beats, i) {
       var text = beats.map(line).join(' ');
-      var titles = CH_TITLES[i] || CH_TITLES[CH_TITLES.length - 1];
+      var titles = titleBank[i] || titleBank[titleBank.length - 1];
       return {
-        title: (cfg.type === 'series' ? 'Chapter ' + (cfg.chapterNumber || 1) + '. ' : '') + pick(r, titles),
+        title: (cfg.type === 'series' ? chapterLabel + (cfg.chapterNumber || 1) + '. ' : '') + pick(r, titles),
         text: text,
         voice: voiceMap[i % voiceMap.length]
       };

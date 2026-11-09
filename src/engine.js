@@ -44,16 +44,27 @@ window.CEngine = (function () {
   function pick(r, arr) { return arr[Math.floor(r() * arr.length) % arr.length]; }
 
   function namesOf(cfg) {
+    var lang = cfg && cfg.language;
     var input = cfg && cfg.names;
-    var raw = (typeof input === 'string' && input ? input : 'a little dreamer').slice(0, MAX_NAME_LENGTH);
+    var fallback = lang === 'hi' ? 'एक नन्हा स्वप्नदर्शी' : lang === 'bn' ? 'এক ছোট্ট স্বপ্নবাজ' : 'a little dreamer';
+    var conjunction = lang === 'hi' ? 'और' : lang === 'bn' ? 'আর' : 'and';
+    var raw = (typeof input === 'string' && input ? input : fallback).slice(0, MAX_NAME_LENGTH);
     var parts = raw.split(/,|\band\b|\bor\b|&|;|\+|\//i).map(function (s) { return s.trim(); }).filter(Boolean);
-    if (!parts.length) parts = ['a little dreamer'];
-    return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0] };
+    if (!parts.length) parts = [fallback];
+    return { list: parts, text: parts.length > 1 ? parts.slice(0, -1).join(', ') + ' ' + conjunction + ' ' + parts[parts.length - 1] : parts[0] };
   }
 
   var VILLAINS = [
     'a grumpy little cloud', 'a pocket-sized dragon', 'a moth who borrowed things',
     'a sleepy troll with cold feet', 'a fox who never said sorry', 'a small shadow with big ideas'
+  ];
+  var VILLAINS_HI = [
+    'रूठे हुए छोटे बादल', 'जेब में समा जाने वाले नन्हे अजगर', 'चीज़ें उधार लेने वाले पतंगे',
+    'ठंडे पैरों वाले उनींदे दैत्य', 'माफ़ी न माँगने वाली लोमड़ी', 'बड़े विचारों वाली छोटी परछाईं'
+  ];
+  var VILLAINS_BN = [
+    'গোমড়ামুখো ছোট্ট মেঘ', 'মুঠোভরা ছোট্ট এক ড্রাগন', 'জিনিস ধার নিতে ভালোবাসত এমন এক নিশাচর প্রজাপতি',
+    'ঠান্ডা পায়ের এক ঘুমকাতুরে দানব', 'কখনও ক্ষমা চাইত না এমন এক শিয়াল', 'বড় বড় ভাবনা ছিল এমন এক ছোট্ট ছায়া'
   ];
   var TITLE_NOUNS = {
     forest: ['Lantern', 'Whispering Tree', 'Moss Path'], castle: ['Humming Key', 'Walking Tower', 'Little Knight'],
@@ -93,6 +104,20 @@ window.CEngine = (function () {
     ['Everything in its place', 'The long way home', 'Softly, softly'],
     ['Goodnight, little star', 'The blanket and the moon', 'Until tomorrow night']
   ];
+  var CH_TITLES_HI = [
+    ['रोशनी की पगडंडी', 'साँझ का एक दरवाज़ा', 'जहाँ शांति शुरू होती है'],
+    ['एक छोटी-सी उलझन', 'किसी से पूछना', 'एक अनपेक्षित मेहमान'],
+    ['शांत मन से चुना', 'एक छोटा कदम', 'सबसे ज़रूरी बात'],
+    ['सब कुछ अपनी जगह', 'घर लौटने का लंबा रास्ता', 'धीरे-धीरे'],
+    ['शुभरात्रि, नन्हे तारे', 'कंबल और चाँद', 'कल फिर मिलेंगे']
+  ];
+  var CH_TITLES_BN = [
+    ['আলোর পথ', 'সন্ধ্যার তৈরি এক দরজা', 'যেখানে নীরবতা শুরু'],
+    ['ছোট্ট এক জটিলতা', 'কাউকে জিজ্ঞেস করা', 'অপ্রত্যাশিত অতিথি'],
+    ['শান্ত এক সিদ্ধান্ত', 'একটি ছোট্ট পদক্ষেপ', 'যেটা সবচেয়ে জরুরি'],
+    ['সবকিছু নিজের জায়গায়', 'বাড়ি ফেরার দীর্ঘ পথ', 'ধীরে ধীরে'],
+    ['শুভরাত্রি, ছোট্ট তারা', 'কম্বল আর চাঁদ', 'আগামীকাল আবার দেখা হবে']
+  ];
 
   var VOICE_MAPS = {
     gentle:      ['green', 'blue', 'green', 'yellow', 'green'],
@@ -113,6 +138,9 @@ window.CEngine = (function () {
        keeps the preset's scenery, friends and objects so the prose still works */
     var setting = D.SETTINGS.filter(function (s) { return s.id === cfg.setting; })[0] || D.SETTINGS[0];
     var value = D.VALUES.filter(function (v) { return v.id === cfg.value; })[0] || D.VALUES[0];
+    var settingLocale = D.SETTING_NARRATIVES && D.SETTING_NARRATIVES[cfg.language];
+    var localizedSetting = settingLocale && settingLocale[setting.id];
+    if (localizedSetting) setting = Object.assign({}, setting, localizedSetting);
     var cp = String(cfg.customPlace || '').trim();
     var cv = String(cfg.customValue || '').trim();
     if (cp) {
@@ -133,10 +161,11 @@ window.CEngine = (function () {
     var trans = D.VALUE_TRANSLATIONS[value.id] || { en: value.label.toLowerCase(), hi: value.hi, bn: value.bn };
     var lang = cfg.language || 'en';
     var names = namesOf(cfg);
-    var villain = cfg.villain ? (cfg.villainText || pick(r, VILLAINS)) : '';
+    var villainPool = lang === 'hi' ? VILLAINS_HI : lang === 'bn' ? VILLAINS_BN : VILLAINS;
+    var villain = cfg.villain ? (cfg.villainText || pick(r, villainPool)) : '';
     return {
       name: names.text,
-      place: cfg.language === 'hi' ? 'उस शांत जगह' : cfg.language === 'bn' ? 'সেই শান্ত জায়গা' : setting.place,
+      place: setting.place,
       detail: setting.detail,
       friend: setting.friend,
       thing: setting.thing,
@@ -176,11 +205,13 @@ window.CEngine = (function () {
     }
 
     var voiceMap = VOICE_MAPS[cfg.mood] || VOICE_MAPS.gentle;
+    var titleBank = cfg.language === 'hi' ? CH_TITLES_HI : cfg.language === 'bn' ? CH_TITLES_BN : CH_TITLES;
+    var chapterLabel = cfg.language === 'hi' ? 'अध्याय ' : cfg.language === 'bn' ? 'অধ্যায় ' : 'Chapter ';
     var chapters = recipe.map(function (beats, i) {
       var text = beats.map(line).join(' ');
-      var titles = CH_TITLES[i] || CH_TITLES[CH_TITLES.length - 1];
+      var titles = titleBank[i] || titleBank[titleBank.length - 1];
       return {
-        title: (cfg.type === 'series' ? 'Chapter ' + (cfg.chapterNumber || 1) + '. ' : '') + pick(r, titles),
+        title: (cfg.type === 'series' ? chapterLabel + (cfg.chapterNumber || 1) + '. ' : '') + pick(r, titles),
         text: text,
         voice: voiceMap[i % voiceMap.length]
       };
