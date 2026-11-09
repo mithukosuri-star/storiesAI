@@ -1,0 +1,163 @@
+{
+  "dateUtc": "2026-11-09",
+  "browser": "HeadlessChrome/153.0.8010.0",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "environment": {
+    "headless": true,
+    "physicalAudioDevicePresent": false,
+    "nativeSpeechSynthesis": {
+      "supported": true,
+      "voices": []
+    }
+  },
+  "testStory": {
+    "id": "story-mw9hjexq-4nh7",
+    "title": "Audio QA — a quiet forest"
+  },
+  "music": {
+    "started": true,
+    "contextState": "running",
+    "sampleRateHz": 44100,
+    "outputRms": 0.004130175179525499,
+    "musicBusGainAtSteadyState": 0.8500000238418579,
+    "musicBusRmsBeforeWord": 0.0036708989897983216,
+    "duckGainSamples": [
+      {
+        "targetMs": 50,
+        "elapsedMs": 52,
+        "musicBusGain": 0.5758336186408997
+      },
+      {
+        "targetMs": 200,
+        "elapsedMs": 192,
+        "musicBusGain": 0.2526600658893585
+      },
+      {
+        "targetMs": 700,
+        "elapsedMs": 702,
+        "musicBusGain": 0.4858691990375519
+      },
+      {
+        "targetMs": 1700,
+        "elapsedMs": 1701,
+        "musicBusGain": 0.8500000238418579
+      }
+    ],
+    "scheduledDuckRamps": [
+      {
+        "targetGain": 0.85,
+        "relativeMs": 1600
+      },
+      {
+        "targetGain": 0.22,
+        "relativeMs": 120
+      },
+      {
+        "targetGain": 0.85,
+        "relativeMs": 1500
+      }
+    ],
+    "musicBusGainAfterStop": 0.00009999999747378752,
+    "outputRmsAfterStop": 0.000006250406028892146,
+    "musicRmsAfterStop": 0.000007353267907214542
+  },
+  "wordSfx": {
+    "sound": "bells",
+    "wordResting": true,
+    "levels": [
+      {
+        "targetMs": 50,
+        "sfxRms": 0.061748910443235425
+      },
+      {
+        "targetMs": 200,
+        "sfxRms": 0.055319564035906967
+      },
+      {
+        "targetMs": 700,
+        "sfxRms": 0.007954836200186596
+      },
+      {
+        "targetMs": 1700,
+        "sfxRms": 0.00006360718599697077
+      }
+    ]
+  },
+  "narration": {
+    "nativeVoiceCount": 0,
+    "testVoice": {
+      "name": "meSpeak English (US) — QA test voice",
+      "lang": "en-US"
+    },
+    "completedStory": {
+      "label": "🔊 Read to me",
+      "buttonActive": false,
+      "isSpeaking": false,
+      "utterances": [
+        {
+          "text": "The silver bells ring softly in the forest.",
+          "lang": "en-IN",
+          "voice": "meSpeak English (US) — QA test voice",
+          "rate": 0.86,
+          "started": true,
+          "ended": true,
+          "durationSeconds": 2.8755102040816327
+        },
+        {
+          "text": "A small fox follows the moonlit path home.",
+          "lang": "en-IN",
+          "voice": "meSpeak English (US) — QA test voice",
+          "rate": 0.86,
+          "started": true,
+          "ended": true,
+          "durationSeconds": 3.1776417233560093
+        },
+        {
+          "text": "Goodnight, little dreamer.",
+          "lang": "en-IN",
+          "voice": "meSpeak English (US) — QA test voice",
+          "rate": 0.86,
+          "started": true,
+          "ended": true,
+          "durationSeconds": 1.9304761904761905
+        }
+      ]
+    },
+    "stop": {
+      "startedUtterance": {
+        "text": "The silver bells ring softly in the forest.",
+        "started": true,
+        "speechRms": 0.03976971771579536
+      },
+      "button": "🔊 Read to me",
+      "buttonActive": false,
+      "isSpeaking": false,
+      "cancelled": true
+    },
+    "exit": {
+      "route": "#/library",
+      "activeView": [
+        "view-library"
+      ],
+      "isSpeaking": false,
+      "speechCancelled": true,
+      "musicOn": false
+    }
+  },
+  "audioCapture": {
+    "path": "qa/audio-output-walkthrough.wav",
+    "source": "headless browser WebAudio output mirrored to MediaStreamRecorder, decoded to PCM WAV",
+    "durationSeconds": 16.379977324263038,
+    "pcmRms": 0.06683719652696145,
+    "peak": 0.6204804182052612,
+    "compressedBytes": 244173
+  },
+  "limitations": [
+    "Chromium exposed zero native speechSynthesis voices; the narration integration check used a test-only meSpeak English-US shim.",
+    "The sandbox had no physical audio device; sound was measured and captured as a waveform, not human-listened to in this environment."
+  ],
+  "result": "PASS_SIGNAL_AND_UI_LIFECYCLE; NATIVE_DEVICE_LISTENING_PENDING"
+}
