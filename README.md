@@ -24,6 +24,15 @@ python3 -m http.server 8000 --bind 0.0.0.0
 Any static host works (GitHub Pages, Netlify, Cloudflare Pages, S3, …).
 **HTTPS (or localhost) is required** for the service worker and the install prompt.
 
+### Clipboard QA
+
+For a complete clipboard readback, serve the repository and open `qa/clipboard-inspector.html` on the
+same origin as the app. In the story reader, choose **Copy text**, then use **Paste from clipboard**
+(or Ctrl+V / ⌘V) in the inspector. It displays the entire payload, character/line/byte counts, a
+SHA-256 digest, and checks for HTML tags, sound-effect tokens, and Markdown code fences. Download the
+plain-text snapshot to retain the observation. Readback uses `textContent`, so pasted markup is never
+rendered as HTML.
+
 ### Install on a device
 - **Android / Chrome / Edge:** browser menu → *Install app* (or the **INSTALL** pill in the top bar).
 - **iPhone / iPad / Safari:** Share → *Add to Home Screen*.
