@@ -115,7 +115,8 @@ storiesAI/
 ├── sw.js                   ← offline service worker (cache storiesai-shell-v11)
 ├── icons/                  ← 192, 512, maskable, apple-touch, favicon (storiesAI spark)
 ├── assets/
-│   ├── fonts/              ← 5 self-hosted woff2 (Fraunces ×2, Cormorant italic, Jost, Nunito)
+│   ├── fonts/              ← 7 self-hosted woff2 (Fraunces ×2, Cormorant italic, Jost, Nunito,
+│   │                          Noto Serif Devanagari + Bengali script subsets for hi/bn stories)
 │   ├── hero-night.jpg/png  ← legacy artwork, no longer used by the landing
 │   └── mark.svg            ← gold spark mark
 ├── src/                    ← editable sources

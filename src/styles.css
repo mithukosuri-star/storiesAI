@@ -1149,8 +1149,10 @@ body.sky-light #starfield{opacity:.32}
    The corner labels sit on top of the chapter content on a short screen.
    A soft scrim behind them (the topbar already had one) fixes the contrast
    without adding another opaque bar. */
-#chrome::after{content:"";position:absolute;left:0;right:0;bottom:0;height:104px;pointer-events:none;z-index:-1;
-  background:linear-gradient(0deg,rgba(5,4,15,.94) 0%,rgba(5,4,15,.62) 42%,rgba(5,4,15,0) 100%)}
+#chrome::after{content:"";position:absolute;left:0;right:0;bottom:0;height:112px;pointer-events:none;z-index:-1;
+  background:linear-gradient(0deg,rgba(5,4,15,.97) 0%,rgba(5,4,15,.8) 46%,rgba(5,4,15,0) 100%)}
+@media(max-width:760px){#chrome::after{height:132px;
+  background:linear-gradient(0deg,rgba(5,4,15,.99) 0%,rgba(5,4,15,.9) 40%,rgba(5,4,15,.45) 74%,rgba(5,4,15,0) 100%)}}
 body.app-view #chrome::after{display:none}
 
 /* ---- 23 · scroll progress on a phone ---------------------------------
@@ -1169,8 +1171,9 @@ body.app-view .scroll-progress{opacity:0!important}
    single row you can nudge sideways, with the same hairlines. */
 @media(max-width:760px){
   .reader-toolbar{top:calc(62px + env(safe-area-inset-top,0px));flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
-    justify-content:flex-start;gap:2px;padding:7px 10px;border-radius:999px;scrollbar-width:none;
-    -webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+    justify-content:flex-start;gap:2px;padding:7px 18px 7px 10px;border-radius:999px;scrollbar-width:none;
+    background:rgba(9,8,24,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    -webkit-mask-image:linear-gradient(90deg,#000 84%,rgba(0,0,0,.25) 98%,transparent);mask-image:linear-gradient(90deg,#000 84%,rgba(0,0,0,.25) 98%,transparent)}
   .reader-toolbar::-webkit-scrollbar{display:none}
   .tool-btn{flex:none;padding:9px 12px;font-size:8.5px;letter-spacing:.14em}
   .reader-toolbar .spacer{display:none}
@@ -1218,3 +1221,99 @@ body.app-view .scroll-progress{opacity:0!important}
   .foot-inner .foot-note{padding-top:18px;font-size:10.5px;line-height:1.85}
   .foot-links{gap:10px 16px}
 }
+
+/* ---- 28 · Hindi and Bengali, drawn properly -------------------------
+   The reader serves stories in three languages, but the Indic lines were
+   falling through to whatever the OS happened to have — in a headless
+   browser that is a row of tofu boxes, and on many desktops it is worse.
+   A script subset is now embedded, so हिन्दी and বাংলা are always drawn in
+   a serif that matches the night. */
+.lang-pills .pill em, .lang-note, [lang="hi"], [lang="bn"],
+.chapter .prose[lang="hi"], .chapter .prose[lang="bn"]{font-family:'Noto Serif Devanagari','Noto Serif Bengali',"Cormorant Garamond",serif}
+.lang-pills .pill[data-id="hi"] em{font-family:'Noto Serif Devanagari',serif;font-size:16px;letter-spacing:0}
+.lang-pills .pill[data-id="bn"] em{font-family:'Noto Serif Bengali',serif;font-size:16px;letter-spacing:0}
+.chapter .prose[lang="hi"]{font-family:'Noto Serif Devanagari',var(--serif);line-height:2.05;font-size:1.06em}
+.chapter .prose[lang="bn"]{font-family:'Noto Serif Bengali',var(--serif);line-height:2.05;font-size:1.06em}
+
+/* Indic headings: the chapter title, cover title and card title sit above a
+   prose block in the same language, so they must be drawn by the same serif. */
+[lang="hi"] h1,[lang="hi"] h2,[lang="hi"] h3,[lang="hi"] .story-title,[lang="hi"] .card-title,
+[lang="hi"] .display,[lang="hi"] .book-title{font-family:'Noto Serif Devanagari',var(--serif);line-height:1.42;letter-spacing:0}
+[lang="bn"] h1,[lang="bn"] h2,[lang="bn"] h3,[lang="bn"] .story-title,[lang="bn"] .card-title,
+[lang="bn"] .display,[lang="bn"] .book-title{font-family:'Noto Serif Bengali',var(--serif);line-height:1.42;letter-spacing:0}
+.story-cover[lang="hi"] h1{font-size:clamp(24px,3.4vw,38px)}
+.story-cover[lang="bn"] h1{font-size:clamp(24px,3.4vw,38px)}
+
+/* ---- 29 · the corner labels need a margin ---------------------------
+   On a phone the scene is 125svh and its content centres inside it, so the
+   last line of the sounds chapter landed on the bottom labels. Extra bottom
+   padding lifts the whole composition clear of them. */
+@media(max-width:760px){
+  .scene{padding-bottom:clamp(150px,20vh,190px)}
+  .scene.hero{padding-bottom:clamp(130px,17vh,165px)}
+  .scene.end{padding-bottom:clamp(18px,3vh,30px)}
+  .scene.pin-scene{padding-bottom:0}
+  .sound-feedback,.music-hint{margin-top:clamp(18px,3vh,26px)}
+  /* the pinned music chapter fills the screen; lift its composition off the
+     bottom labels with real padding rather than a smaller gap */
+  /* no pinning on a phone: the chapter is one tall column, and its last line
+     must sit clear of the fixed corner labels rather than under them */
+  .scene.pin-scene{padding-bottom:clamp(120px,15vh,150px)}
+  .scene.pin-scene .pin-sticky{height:auto;min-height:0;padding:0}
+  /* compact the music console on a narrow screen so the last line of copy
+     clears the fixed corner labels */
+  .music-stage .music-moods{gap:12px 8px;margin-top:16px}
+  .music-stage .mood-btn{gap:9px}
+  .music-stage .mood-btn small{font-size:14px;margin-top:1px}
+  .music-stage .music-hint{font-size:14px;margin-top:12px}
+  .music-stage .music-now{margin-bottom:8px}
+  .scene.pin-scene .pin-wrap{gap:clamp(14px,2.2vh,24px)}
+  .music-hint{margin-top:14px}
+}
+@media(max-width:760px){
+  /* the sounds chapter's footnote ran into the fixed corner label */
+  .sound-demo + .sound-feedback, .sound-feedback{max-width:42ch;margin-inline:auto;margin-bottom:26px;line-height:1.9;font-size:9px;letter-spacing:.2em;text-wrap:balance}
+}
+
+/* ---- 30 · the reader's top edge --------------------------------------
+   Inside a story the page scrolls under a fixed wordmark, and the chapter
+   dots used to ghost through it. The scrim is opaque where it must be, and
+   the phone toolbar now fades its own trailing edge so a long row reads as
+   "there is more this way" instead of a word cut in half. */
+body.reading-story .topbar::before{height:120px;
+  background:linear-gradient(180deg,rgba(5,4,15,.995) 0%,rgba(5,4,15,.97) 62%,rgba(5,4,15,.6) 86%,rgba(5,4,15,0) 100%)}
+@media(max-width:760px){
+  body.reading-story .topbar::before{height:104px;
+    background:linear-gradient(180deg,#05040f 0%,rgba(5,4,15,.99) 70%,rgba(5,4,15,.55) 90%,rgba(5,4,15,0) 100%)}
+  .reader-toolbar{-webkit-mask-image:linear-gradient(90deg,#000 76%,rgba(0,0,0,.5) 92%,transparent);mask-image:linear-gradient(90deg,#000 76%,rgba(0,0,0,.5) 92%,transparent)}
+}
+
+/* ---- 31 · the phone reader bar, cut to what a phone needs -------------
+   Measured: seven tools needed 550 px inside a 392 px bar, so "Share" was
+   sliced in half. Copy, print and remove are desktop gestures (print) or
+   already live in the library (remove), so the phone keeps the five that
+   matter and the row now fits exactly — no clipping, no second line. */
+@media(max-width:760px){
+  .reader-toolbar #copyStory,.reader-toolbar #printStory,.reader-toolbar #deleteStory{display:none}
+  .reader-toolbar{justify-content:space-between;padding:7px 8px;
+    -webkit-mask-image:none;mask-image:none;overflow:visible}
+  .reader-toolbar .tool-btn{padding:10px 9px;font-size:8.5px;letter-spacing:.1em}
+}
+@media(max-width:360px){
+  .reader-toolbar .tool-btn{padding:10px 6px;font-size:8px;letter-spacing:.06em}
+}
+
+/* ---- 32 · the app pages need a quieter backdrop ----------------------
+   Behind the wizard the world's tree line read as a forest pressing against
+   the headline. In the app views the sky should be a memory, not a scene:
+   the world drops back and a soft column of night sits under the copy so
+   text always has a calm ground. */
+body.app-view #world{opacity:.11}
+body.app-view #starfield{opacity:.3}
+body.app-view::before{background:
+  radial-gradient(1200px 620px at 50% 0%,rgba(18,14,44,.72),rgba(5,4,15,0) 72%),
+  radial-gradient(900px 900px at 12% 92%,rgba(12,10,34,.85),rgba(5,4,15,0) 70%),
+  linear-gradient(180deg,#06050f 0%,#080719 45%,#05040f 100%)}
+/* the app views keep only a rumour of the world — its tree line was reading
+   as faint blocks behind the form fields */
+body.app-view #world{opacity:.07}

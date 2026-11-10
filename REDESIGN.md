@@ -102,3 +102,13 @@ was changed:
 - **The menu** — three doors and a settings list instead of nine identical pills.
 - **Performance** — the particle sky pauses behind any dialog and only runs at full strength on the landing page; a hidden tab for over two minutes frees the WebGL context and rebuilds it on return. Measured: LCP 453 ms, CLS 0.001, ~800 DOM nodes.
 - **Accessibility** — skip link, focus trap + restore + Esc in dialogs, `aria-live` toast that re-announces, chapter dots with real labels, progress semantics, and a contrast sweep that now reports zero failures.
+
+### Third pass — what testing in a real browser found this time
+- **The phone reader bar was clipping "Share"** (seven tools needed 550 px in a 392 px bar). The phone now keeps the five that belong there — Copy, Print and Remove are desktop/library gestures — and the row fits exactly: `scrollWidth 392 = clientWidth 392`.
+- **Pinned music chapter was pinned at the wrong height on a phone**: the sticky stopped being useful and its last line sat under the fixed corner labels. On phones the chapter is a single flowing column with 15 vh of clearance; on desktop it still pins for 68 svh.
+- **`footer` after the finale**: the last screen ended with a band of nothing. The finale is bottom-anchored at 72 svh so the colophon arrives with it.
+- **The topbar scrim had been silently disabled** by `isolation:isolate` on its own pseudo-element — the wordmark now always has a real gradient behind it, and the reading view gets an opaque one because chapter dots were ghosting through.
+- **Hindi and Bengali were rows of tofu boxes.** A Devanagari and a Bengali serif subset are now embedded (110 KB) and used for the language pills, story titles and chapter prose (`lang="hi"`/`lang="bn"` set on the article, cover and card). Verified with a real Hindi story in the reader.
+- **Small-text contrast**: dim 4.5:1 → 6.2:1, corner labels 3.6:1 → 5.6:1, footer 4.0:1 → 6.2:1. The automated sweep now returns zero failures (the only entry is `✦`, decorative and `aria-hidden`).
+- **`saveData` / 2G** now selects the drawn sky instead of the WebGL world, with the choice still overridable from ☰.
+- **Under the wizard the world's tree line read as dark blocks behind the fields** — app views keep only 7 % of it behind a calm night column.

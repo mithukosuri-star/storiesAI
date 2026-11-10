@@ -1116,7 +1116,7 @@
       ? ' · Pouch ' + txn.balanceBefore + ' → ' + txn.balanceAfter + ' Stars' : '';
     var chaptersHTML = story.chapters.map(function (c, i) {
       var v = D.VOICES[c.voice] || D.VOICES.green;
-      return '<article class="chapter" id="chap-' + i + '" style="--voice:' + v.css + '">' +
+      return '<article class="chapter" id="chap-' + i + '" lang="' + esc(story.cfg.language || 'en') + '" style="--voice:' + v.css + '">' +
         '<div class="voice-tag"><i></i>' + v.label + ' voice · ' + v.hint + '</div>' +
         '<div class="voice-hint"><span class="vh-label">' + v.icon + ' ' + esc(v.short) + '</span>' +
           '<span class="vh-line">' + esc(v.line) + '</span></div>' +
@@ -1128,7 +1128,7 @@
     }).join('');
 
     var html =
-      '<div class="story-cover"><div class="scene-art">' + scenery(s, m, false) + '</div><div class="cover-text">' +
+      '<div class="story-cover" lang="' + esc(story.cfg.language || 'en') + '"><div class="scene-art">' + scenery(s, m, false) + '</div><div class="cover-text">' +
       '<div class="meta">✦ ' + esc(story.source === 'ai' ? 'Written by your AI storyteller' : 'Woven on this device') + ' · ' + esc(prettyDate(story.createdAt)) + esc(pouchSummary) + '</div>' +
       '<h1>' + esc(story.title) + '</h1><div class="cover-meta">' +
       '<span class="pill">' + esc(label('age', story.cfg.age)) + '</span><span class="pill">' + esc(String(story.cfg.customValue || '').trim() || label('value', story.cfg.value)) + '</span>' +
@@ -1851,7 +1851,16 @@
   /* Sky: 'auto' flies the WebGL world (falling back to the 2D canvas sky),
      'stars' keeps the lighter 2D sky — a per-device escape hatch from ☰ */
   function startSky() {
-    if (S.settings.sky === 'stars' || !window.CWorld) { window.CStars.init(); if (window.__sceneUpdate) window.__sceneUpdate(); return; }
+    /* Data-saver and very slow radios get the drawn sky instead of the WebGL
+       world: same night, a fraction of the work. `sky:auto` still respects it;
+       an explicit choice from ☰ always wins. */
+    var frugal = false;
+    try {
+      var c = navigator.connection || {};
+      frugal = c.saveData === true || /(^|-)2g$/.test(String(c.effectiveType || ''));
+    } catch (e) {}
+    if (S.settings.sky === 'auto' && frugal && document.body) document.body.classList.add('frugal-sky');
+    if (S.settings.sky === 'stars' || !window.CWorld || (S.settings.sky === 'auto' && frugal)) { window.CStars.init(); if (window.__sceneUpdate) window.__sceneUpdate(); return; }
     var worldUp = false;
     try { worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
     if (worldUp) {
