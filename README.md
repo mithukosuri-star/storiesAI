@@ -1,4 +1,6 @@
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/mithukosuri-star/storiesAI?utm_source=oss&utm_medium=github&utm_campaign=mithukosuri-star%2FstoriesAI&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)# storiesAI — a bedtime fairy tale PWA
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/mithukosuri-star/storiesAI?utm_source=oss&utm_medium=github&utm_campaign=mithukosuri-star%2FstoriesAI&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
+# storiesAI — a bedtime fairy tale PWA
 
 **storiesAI** is an installable, offline-first progressive web app that writes a fresh, personalized
 bedtime story for a child: name, age, value, place, mood → one gentle tale with music, tappable
@@ -16,7 +18,7 @@ The deliverable is **`index.html`**: a single self-contained page. Fonts (5 × w
 the particle sky are all inlined — no CDN, no network, no build step needed to view it.
 
 ```bash
-cd chandni-pwa
+cd storiesAI
 python3 -m http.server 8000 --bind 0.0.0.0
 # open http://localhost:8000/index.html
 ```
@@ -48,14 +50,17 @@ Once installed, the shell, the particle sky, music and stories all work with no 
 |---|---|
 | **The world** | A hand-written WebGL particle world (no libraries): aurora sky with stars, Milky Way, moon and shooting stars; a hill silhouette; a forest of particle conifers; a glowing golden path; hot-air balloons; and set pieces met along the flight — a spiral vortex, a tree of light, rising lanterns, a ring of shooting stars and a castle. The camera flies down the path as you scroll, exactly like the reference. ~95k points on desktop, ~66k on phones; falls back to the 2D canvas sky if WebGL is unavailable. |
 | **Cursor** | A custom two-part pointer like the reference: a cream dot that tracks instantly with a gold trailing halo that swells on anything clickable; primary buttons are magnetic and lean towards the pointer. Silently disabled on touch and for `prefers-reduced-motion`. |
-| **I · Prologue** | Full-bleed starfield, giant Fraunces italic "No one has ever told it…", `LISTEN WITH SOUND`, `SCROLL TO ENTER`. Fixed wordmark, `SIGN IN`, `CREATE A STORY`, vertical `AWAKE / ASLEEP` rail. |
-| **II · The journey** | "Personalized bedtime stories for children" → "A story made to measure" (five mini features) → statement scene "And a little villain." with particle pull-in. |
-| **III · The music** | Four moods as audible pills (Gentle / Adventurous / Magical / Relaxing); the sky switches to a radial particle burst. |
-| **IV · The sounds** | Golden words inside real sentences — tap *wind*, *bells*, *thunderstorm*; music ducks under each one. The sky becomes a particle tree. |
-| **V · The voice** | Four chapter voice colours (Green / Yellow / Blue / Red) with the reading hint for each. |
-| **VI · The ages** | Five age groups, community counter, twelve parent reviews on a snap track. |
-| **VII · Goodnight** | Star pouches (free in this edition), "How a storiesAI story is born", FAQ accordion. |
-| **VIII · The end** | Happily-ever-after CTA and footer. |
+| **Opening** | Pure-CSS entrance veil over the wordmark → full-bleed starfield → giant Fraunces italic "No one has ever told it…", a hairline rule, one tappable golden sentence, `LISTEN WITH SOUND`, `SCROLL TO ENTER`. Fixed wordmark, `SIGN IN`, `CREATE A STORY`, vertical `AWAKE / ASLEEP` rail. |
+| **I · Prologue** | The wish: "Personalized bedtime stories for children" over the night sky. |
+| **II · The journey** | A five-part ledger (name · age · value · place · a little villain) — rules instead of cards — then the statement scene "And a little villain." with a particle pull-in. |
+| **III · The music** | A real little player: four moods as a dial, a live waveform, `PLAY / STOP / MUTE`, a moon-orb that takes the mood's colour. The chapter is natively *sticky-pinned* on tall screens (the copy and the player stay while the sky drifts), and unpins itself on phones and short screens so nothing is ever cut off. Nothing autoplays. |
+| **IV · The sounds** | Golden words inside three real sentences — tap *wind*, *bells*, *thunderstorm*; the music ducks under each one, the word rests for three seconds and a haptic tick fires on phones. A live status line names the sound. |
+| **V · The voice** | Four chapter voice colours (Green / Yellow / Blue / Red) as a spectrum. Selecting one swaps in a **written sample passage**, the reading cue, and a `HEAR THE RHYTHM` button that speaks the guidance. |
+| **VI · The ages** | Five age groups on a **timeline**: each selection reveals an age-specific opening line, the sentence/word budget and the voice character. |
+| **VII · Parents** | Community counter and twelve parent reviews on a snap track. |
+| **VIII · Stars** | The Stars / credits explanation: one Star per story, three gifted, pouches free in this edition. |
+| **IX · How it works** | Six numbered moves, then the FAQ accordion. |
+| **X · The end** | Happily-ever-after CTA over a halo, then an editorial two-column footer. |
 
 The particle sky is a single canvas (`src/stars.js`) with nine choreographed modes — starfield,
 nebula drift, spiral vortex, luminous ring, radial burst, tree of light, soft wave, constellation,
@@ -103,10 +108,10 @@ back to the offline weaver** and says so in the reader.
 ## Files
 
 ```
-chandni-pwa/
+storiesAI/
 ├── index.html              ← THE DELIVERABLE (~500 KB, self-contained, built)
 ├── manifest.webmanifest    ← PWA metadata + shortcuts
-├── sw.js                   ← offline service worker (cache storiesai-shell-v2)
+├── sw.js                   ← offline service worker (cache storiesai-shell-v11)
 ├── icons/                  ← 192, 512, maskable, apple-touch, favicon (storiesAI spark)
 ├── assets/
 │   ├── fonts/              ← 5 self-hosted woff2 (Fraunces ×2, Cormorant italic, Jost, Nunito)
@@ -158,30 +163,22 @@ node tests/world-check.js   # WebGL world boots + screenshots along the flight
 
 ---
 
-## Motion on phones
+## Motion system
 
-The scroll choreography is tuned separately for touch devices, so the phone build animates at
-frame rate instead of dropping the show:
+The vocabulary of the reference — reveals, parallax, pinned chapters, scroll-linked
+transforms — is implemented by hand. There is **no GSAP and no CDN**: the deliverable is a
+self-contained offline `index.html`, so a library would have broken the offline contract for
+behaviour that CSS + one rAF ticker already give.
 
-- **No blur filters on touch.** The scene fades use opacity + a short lift; the desktop-only
-  `blur()`/`scale()` parallax is what iOS silently drops (and it is the most expensive thing on
-  the page). `will-change` is only applied to scenes that are actually near the viewport.
-- **One rAF ticker** drives the scenes, the rail dot and the particle flight, so the fades follow
-  a finger on every mobile browser — not only when `scroll` events happen to arrive.
-- **The night sky is a fixed layer**, not a `background-attachment: fixed` on `<body>` (ignored by
-  iOS Safari, a full repaint per frame on Android).
-- **WebGL context loss is handled**: when a phone drops the GL context (backgrounded tab, memory
-  pressure) the app falls back to the animated 2D sky instead of freezing on a black canvas.
-- **`prefers-reduced-motion` is respected but no longer freezes the page.** Fades stay, movement
-  and blur are removed. If the phone is set to reduce motion (accessibility setting, *remove
-  animations*, or battery saver) the app offers **☰ → Motion: full** to bring the full show back,
-  for just that device.
-- `vh` fallbacks for every `svh`, safe-area padding for notches, and the chapter rail is kept as a
-  slim progress line (it used to be hidden below 1000 px).
-- **The flying world defends itself**: it retries context creation with conservative options, catches
-  a renderer that throws (instead of dying silently inside a rAF loop), and if the device holds
-  under ~26 fps it drops its render resolution once and then hands over to the 2D sky (~1 s later,
-  not after two slow windows).
+| Layer | How it works |
+|---|---|
+| **Reveals** | `[data-reveal]` + one `IntersectionObserver`. Copy arrives once (opacity + 26 px lift, or a `clip-path` "widow" wipe for display headings), staggered with `--i`, then stays crisp. The old build dimmed every scene to ~30 % unless it was dead-centre; that is gone. |
+| **Entrance** | A CSS-only veil (`animation: veilLift`) lifts over the first 2 s, and the hero copy has its own timed sequence — plus a late `heroFallback` so the headline can never stay invisible if a script fails. |
+| **Scroll link** | One shared rAF ticker drives: the chapter rail + dot, the chapter label, the sky mode (`CStars` / `CWorld`), the scene drift (numerals and ornaments travel slower than the page, and brighten as they cross the viewport) and the WebGL camera progress. Transform-only writes. |
+| **Parallax** | `[data-parallax]` on the hero glow and the closing halo — a single scroll listener, one `transform` per element per frame. |
+| **Pinned chapter** | The music chapter is a native `position: sticky` pane inside a normal section: the browser keeps scrolling, nothing is hijacked. It only pins when the composition fits (min-width 1080 px *and* min-height 780 px). |
+| **Reduced motion** | `prefers-reduced-motion` reveals everything at once, removes transforms, drift, parallax and the long transitions, but keeps short fades so the page still breathes. `☰ → Motion: full` overrides it per device. |
+| **Phones** | No blur filters, no parallax, no drift; the reveal is opacity + a short lift, the rail becomes a slim progress line, and every `vh` has an `svh` fallback. |
 
 ### The book of stars (prologue)
 

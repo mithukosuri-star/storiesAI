@@ -105,78 +105,113 @@
       d.split('|').map(function (p) { return '<path d="' + p + '"/>'; }).join('') + '</svg>';
   }
 
-  /* ---------------- scroll choreography (scenes + particle flight) ----------------
-     Tuned for phones: no blur filters (iOS silently drops heavily filtered
-     layers, and they eat the frame budget), one shared rAF ticker instead of a
-     handler per event, and a tick that keeps running while the finger is down so
-     the fades follow the scroll in every mobile browser. */
+  /* ---------------- scroll choreography ----------------
+     The night sky flies with the scroll (WebGL world / 2D stars), while the
+     copy itself is never dimmed: scenes stay crisp and their inner elements are
+     revealed once by an IntersectionObserver. One shared rAF ticker drives the
+     rail, the chapter label and the sky mode — no per-element listeners, no
+     filter/opacity work on every frame, and the native scroll is untouched. */
   function initScenes() {
-    var items = $$('.scene').map(function (sc) { return { sc: sc, inner: $('.scene-inner', sc) }; });
+    var items = $$('.scene').map(function (sc) { return { sc: sc }; });
     var railDot = $('#railDot'), railChapter = $('#railChapter'), chapterLabel = $('#chapterLabel'), cue = $('#scrollCue');
     var home = $('#view-home'), scenesEl = $('#scenes');
     var lastMode = -1, flightTotal = 1, lastY = -1, rafId = null;
     function mq(q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } }
-    var coarse = mq('(hover:none)') || mq('(pointer:coarse)') || (window.innerWidth || 0) < 900;
-    /* the phone may be reducing motion (accessibility setting, battery saver).
-       The menu can override that, so read it live instead of once. */
-    function calmOn() { return !document.documentElement.classList.contains('force-motion') && mq('(prefers-reduced-motion: reduce)'); }
     function isHome() { return !!(home && home.classList.contains('active')); }
     function measure() { flightTotal = Math.max(1, (scenesEl || document.body).scrollHeight - (window.innerHeight || 1)); }
 
+    /* --- reveal: each scene's copy arrives once, staggered, and stays put --- */
+    var revealables = $$('[data-reveal]');
+    function showScene(sc) {
+      if (!sc || sc.__shown) return;
+      sc.__shown = true;
+      sc.classList.add('is-in');
+    }
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          var el = en.target;
+          if (el.hasAttribute('data-reveal')) el.classList.add('is-in');
+          var host = el.closest('.scene');
+          if (host) showScene(host);
+          if (el.hasAttribute('data-reveal')) io.unobserve(el);
+        });
+      }, { rootMargin: '0px 0px -14% 0px', threshold: 0.08 });
+      revealables.forEach(function (el) { io.observe(el); });
+      items.forEach(function (it) { io.observe(it.sc); });
+    } else {
+      document.documentElement.classList.add('no-io');
+      items.forEach(function (it) { showScene(it.sc); });
+    }
+
     function update() {
       if (!isHome()) return;
-      var vh = window.innerHeight || 1, mid = vh / 2;
+      var vh = window.innerHeight || 1, midY = vh * 0.42;
       var sy = window.scrollY || window.pageYOffset || 0;
-      var best = 0, bestD = 1e9, reach = vh * 1.45, calmNow = calmOn();
+      var best = 0, bestD = 1e9, current = null;
       for (var k = 0; k < items.length; k++) {
-        var it = items[k], inner = it.inner;
-        var r = it.sc.getBoundingClientRect();
-        var d = Math.abs(r.top + r.height / 2 - mid);
+        var sc = items[k].sc, r = sc.getBoundingClientRect();
+        var centre = r.top + r.height / 2;
+        var d = Math.abs(centre - vh / 2);
         if (d < bestD) { bestD = d; best = k; }
-        if (!inner) continue;
-        if (d > reach) {                                  /* far off screen: park it, skip the work */
-          if (inner.style.opacity !== '0') inner.style.opacity = '0';
-          if (it.sc.classList.contains('active')) it.sc.classList.remove('active');
-          if (inner.classList.contains('near')) inner.classList.remove('near');
-          continue;
-        }
-        var v = Math.pow(Math.max(0, Math.min(1, 1 - d / (vh * .82))), 1.12);
-        inner.style.opacity = v.toFixed(3);
-        if (v > .05) { if (!inner.classList.contains('near')) inner.classList.add('near'); }
-        else if (inner.classList.contains('near')) inner.classList.remove('near');
-        if (calmNow) {                                    /* reduced motion: fade only */
-          inner.style.transform = 'none';
-          inner.style.filter = '';
-        } else if (coarse) {                              /* phones: opacity + a short lift */
-          inner.style.filter = '';
-          inner.style.transform = 'translate3d(0,' + ((1 - v) * 14).toFixed(1) + 'px,0)';
-        } else {
-          inner.style.filter = 'blur(' + ((1 - v) * 9).toFixed(2) + 'px)';
-          inner.style.transform = 'translate3d(0,' + ((1 - v) * 24).toFixed(1) + 'px,0) scale(' + (.975 + v * .025).toFixed(3) + ')';
-        }
-        it.sc.classList.toggle('active', d < vh * .44);
+        sc.classList.toggle('active', r.top < vh * 0.55 && r.bottom > vh * 0.15);
+        if (r.top <= midY && r.bottom > midY && !current) current = sc;
       }
-      var act = items[best] && items[best].sc;
+      var act = current || (items[best] && items[best].sc);
       if (act) {
         var chap = act.getAttribute('data-chapter') || '';
         var name = act.getAttribute('data-name') || '';
         var roman = chap.split('·')[0].trim();
         if (chapterLabel && chapterLabel.textContent !== chap) chapterLabel.textContent = chap;
         var railHtml = '<b>' + esc(roman) + '</b> <em>' + esc(name) + '</em>';
-        if (railChapter && railChapter.dataset.k !== railHtml) {   /* rebuilding HTML every frame is real work on a phone */
+        if (railChapter && railChapter.dataset.k !== railHtml) {
           railChapter.dataset.k = railHtml;
           railChapter.innerHTML = railHtml;
         }
         var m = parseInt(act.getAttribute('data-mode'), 10) || 0;
-        if (m !== lastMode) { lastMode = m; if (window.CStars) window.CStars.setMode(m); }
+        if (m !== lastMode) {
+          lastMode = m;
+          if (window.CStars) window.CStars.setMode(m);
+          if (window.CWorld && window.CWorld.setMode) window.CWorld.setMode(m);
+        }
+        /* each chapter lends the page a faint colour of its own */
+        var accent = act.getAttribute('data-accent');
+        if (accent && act.style.getPropertyValue('--scene-accent') !== accent) {
+          act.style.setProperty('--scene-accent', accent);
+        }
       }
-      /* scrollHeight is a forced layout — reuse the measurement taken on
-         resize/route changes instead of reading it on every scroll frame */
+      /* scroll-linked drift: each scene's ornaments and numeral travel a
+         little slower than the page, and the copy lifts gently as it leaves —
+         transform only, and skipped entirely for reduced motion / phones */
+      var drift = !document.documentElement.classList.contains('force-motion') && !mq('(prefers-reduced-motion: reduce)') && !mq('(pointer:coarse)');
+      for (var q = 0; q < items.length; q++) {
+        var sd = items[q].sc;
+        if (sd.__drifted !== undefined && !drift) continue;
+        var dr = sd.getBoundingClientRect();
+        if (dr.bottom < -vh * 0.4 || dr.top > vh * 1.4) continue;
+        var num = sd.querySelector('.scene-num');
+        var orn = sd.querySelector('.scene-orn');
+        var through = (dr.top + dr.height / 2 - vh / 2) / vh;   /* -1 … 1 */
+        if (!drift) {
+          if (num) num.style.transform = '';
+          if (orn) orn.style.transform = '';
+          sd.__drifted = undefined;
+          continue;
+        }
+        sd.__drifted = true;
+        var lit = Math.max(0, 1 - Math.abs(through) * 1.6);
+        if (num) {
+          num.style.transform = 'translate3d(0,' + (-through * 34).toFixed(1) + 'px,0)';
+          num.style.opacity = (0.05 + lit * 0.09).toFixed(3);
+        }
+        if (orn) orn.style.transform = 'translate3d(0,' + (-through * 16).toFixed(1) + 'px,0) rotate(' + (through * 2).toFixed(2) + 'deg)';
+      }
       var pct = Math.max(0, Math.min(1, sy / Math.max(1, flightTotal)));
       if (railDot) railDot.style.top = (pct * 100) + '%';
       if (railChapter) railChapter.style.top = (pct * 100) + '%';
-      if (cue) { var co = sy > 160 ? '0' : '1'; if (cue.style.opacity !== co) cue.style.opacity = co; }
-      if (window.CWorld) window.CWorld.setProgress(Math.max(0, Math.min(1, sy / flightTotal)));
+      if (cue) { var co = sy > 120 ? '0' : '1'; if (cue.style.opacity !== co) { cue.style.opacity = co; cue.style.pointerEvents = co === '0' ? 'none' : 'auto'; } }
+      if (window.CWorld && window.CWorld.setProgress) window.CWorld.setProgress(pct);
     }
 
     function tick() {
@@ -193,7 +228,7 @@
     window.addEventListener('scroll', nudge, { passive: true });
     window.addEventListener('touchmove', nudge, { passive: true });
     window.addEventListener('wheel', nudge, { passive: true });
-    window.addEventListener('resize', refresh);   /* the document can reflow: re-measure */
+    window.addEventListener('resize', refresh);
     window.addEventListener('orientationchange', function () { setTimeout(refresh, 240); });
     if (window.visualViewport && window.visualViewport.addEventListener) {
       window.visualViewport.addEventListener('resize', refresh);
@@ -206,6 +241,37 @@
     window.addEventListener('pageshow', function () { refresh(); });
     refresh();
     return refresh;
+  }
+
+  /* ---------------- gentle parallax ----------------
+     Transform-only drift for the moon, the hairlines and the halos. Reads
+     scroll once per frame from the shared ticker, writes only `transform`,
+     and switches itself off for reduced motion and coarse pointers. */
+  function initParallax() {
+    var els = $$('[data-parallax]');
+    if (!els.length) return;
+    var mq = function (q) { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (e) { return false; } };
+    var calm = mq('(prefers-reduced-motion: reduce)');
+    var coarse = mq('(hover:none)') || mq('(pointer:coarse)');
+    if ((calm && !document.documentElement.classList.contains('force-motion')) || coarse) return;
+    var raf = null, lastY = -1;
+    function draw() {
+      raf = null;
+      var vh = window.innerHeight || 1, y = window.scrollY || window.pageYOffset || 0;
+      if (y === lastY) return;
+      lastY = y;
+      els.forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.bottom < -vh || r.top > vh * 2) return;
+        var depth = parseFloat(el.getAttribute('data-parallax')) || 0.08;
+        var off = ((r.top + r.height / 2) - vh / 2) * -depth;
+        el.style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)';
+      });
+    }
+    function kick() { if (raf == null && !document.hidden) raf = requestAnimationFrame(draw); }
+    window.addEventListener('scroll', kick, { passive: true });
+    window.addEventListener('resize', kick);
+    draw();
   }
 
   /* ---------------- scenery SVG (theme changes with the story) ---------------- */
@@ -389,7 +455,17 @@
   }
 
   /* ---------------- home content ---------------- */
+  /* short age-specific openings, quoted in the ages timeline */
+  var AGE_SAMPLE = {
+    '0-2': 'Hush, little {name}. The moon is a lantern, the stars are asleep, and the whole wide night is rocking you slowly.',
+    '3-4': 'Once, in a forest that smelled of warm biscuits, a hedgehog borrowed the moon and promised to bring it back by morning.',
+    '5-6': 'Nobody in the village had ever built a machine that could catch a cloud — until {name} found a jar, a song and one very stubborn idea.',
+    '7-8': 'The rule in the castle was simple and unfair: whoever found the golden key would be believed. {name} found the key, and then had a choice to make.',
+    '9-10': 'They said the mountain remembered every promise ever made on it. {name} was about to make one that could not be broken quietly.'
+  };
+
   function renderHome() {
+    /* ---- II · a five-part ledger, not a card grid ---- */
     var features = [
       ['Their name.', 'Your child becomes the hero — add two names for siblings, too.'],
       ['Their age.', 'Language, sentence length and the size of the problem adapt.'],
@@ -397,31 +473,93 @@
       ['A place.', 'The world, the colours and the emotional tone of the tale.'],
       ['A little villain.', 'Optional, harmless, always making amends by the end.']
     ];
-    $('#featureCards').innerHTML = features.map(function (f, i) {
-      return '<div class="mini-feature"><span class="n">0' + (i + 1) + '</span><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
+    var ledger = $('#featureCards');
+    if (ledger) ledger.innerHTML = features.map(function (f, i) {
+      return '<div class="ledger-item" data-reveal="fade" style="--i:' + (i + 2) + '"><span class="n">0' + (i + 1) + '</span><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
     }).join('');
 
-    $('#musicChips').innerHTML = D.MOODS.map(function (m) {
-      return '<button class="pill" data-mood="' + m.id + '"><span class="pill-main"><span class="eq"><i></i><i></i><i></i></span>' + esc(m.label) + '</span><em>' + esc(m.hint) + '</em></button>';
+    /* ---- III · the music: a real little player, never autoplayed ---- */
+    var moodsEl = $('#musicMoods');
+    if (moodsEl) moodsEl.innerHTML = D.MOODS.map(function (m) {
+      return '<button class="mood-btn" data-mood="' + m.id + '" style="--m:' + m.glow + '" aria-pressed="false">' +
+        '<i aria-hidden="true"></i><span><b>' + esc(m.label) + '</b><small>' + esc(m.hint) + '</small></span></button>';
     }).join('');
+    var wave = $('#musicWave');
+    if (wave) {
+      var bars = '';
+      for (var w = 0; w < 34; w++) {
+        var h = 22 + Math.abs(Math.sin(w * 0.72) * 46) + (w % 5) * 4;
+        bars += '<i style="--h:' + h.toFixed(0) + ';--k:' + (w % 9) + '"></i>';
+      }
+      wave.innerHTML = bars;
+    }
+    homeMood('gentle');
+    if (moodsEl) moodsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-mood]'); if (!b) return;
+      selectMood(b.dataset.mood, true);
+    });
+    var play = $('#musicPlay'), stop = $('#musicStop'), mute = $('#musicMute');
+    if (play) play.onclick = function () {
+      if (A.isMusicOn() && homeAudible) { stopHomeMusic(); return; }
+      playHomeMusic();
+    };
+    if (stop) stop.onclick = function () { stopHomeMusic(); toast('Music stopped ✦'); };
+    if (mute) mute.onclick = function () {
+      var m = !A.isMuted || !A.isMuted();
+      if (A.setMuted) A.setMuted(m);
+      mute.setAttribute('aria-pressed', m ? 'true' : 'false');
+      mute.textContent = m ? 'UNMUTE' : 'MUTE';
+      toast(m ? 'Score muted — golden words still speak' : 'Score unmuted');
+    };
 
-    $('#soundDemo').innerHTML = [
+    /* ---- IV · golden sound words: real sentences, real sfx ---- */
+    var demo = [
       'Arianna heard the wind [[wind|rustling]] through the leaves, gently lifting them.',
       'Among the coral branches, little [[bells|golden bells]] were singing.',
       'Far away, beyond the hills, [[thunder|a thunderstorm]] was rumbling itself to sleep.'
-    ].map(function (t) { return '<p>' + E.renderText(t) + '</p>'; }).join('');
+    ];
+    $('#soundDemo').innerHTML = demo.map(function (t) { return '<p>' + E.renderText(t) + '</p>'; }).join('');
+    $('#soundDemo').addEventListener('click', function (e) {
+      var b = e.target.closest('.sound-word'); if (!b) return;
+      soundTap(b);
+      var sfx = D.SFX[b.dataset.sfx];
+      var fb = $('#soundFeedback');
+      if (fb && sfx) { fb.textContent = sfx.emoji + '  ' + sfx.label + ' · the music dipped to make room'; fb.classList.add('active'); }
+    });
 
-    $('#voiceGrid').innerHTML = Object.keys(D.VOICES).map(function (k) {
+    /* ---- V · voice guidance: a spectrum with a real sample passage ---- */
+    var voiceKeys = Object.keys(D.VOICES);
+    $('#voiceGrid').innerHTML = voiceKeys.map(function (k, i) {
       var v = D.VOICES[k];
-      return '<button class="voice-item" style="--dot:' + v.css + '" data-voice="' + k + '"><i class="dot"></i><b>' + esc(v.label) + '</b><small>' + esc(v.hint) + '</small></button>';
+      return '<button class="voice-item" style="--dot:' + v.css + '" data-voice="' + k + '" aria-pressed="false">' +
+        '<i class="dot" aria-hidden="true"></i><b>' + esc(v.label) + '</b><small>' + esc(v.hint) + '</small></button>';
     }).join('');
+    renderVoiceSample('green');
+    $('#voiceGrid').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-voice]'); if (!b) return;
+      var k = b.dataset.voice;
+      $$('.voice-item', this).forEach(function (x) { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
+      b.classList.add('selected'); b.setAttribute('aria-pressed', 'true');
+      renderVoiceSample(k);
+      A.setSound(true); syncSound(); A.speak(D.VOICES[k].line, 'en-IN');
+    });
 
-    $('#ageChips').innerHTML = D.AGES.map(function (a) {
-      return '<button class="pill" data-age="' + a.id + '">' + esc(a.label) + '<em>' + esc(a.hint) + '</em></button>';
+    /* ---- VI · the ages: a timeline with an age-specific opening ---- */
+    var ageEl = $('#ageChips');
+    ageEl.innerHTML = D.AGES.map(function (a) {
+      return '<button class="age-chip" data-age="' + a.id + '" aria-pressed="false"><i aria-hidden="true"></i><b>' + esc(a.label.replace(' years', '')) + '</b></button>';
     }).join('');
+    renderAgePanel('5-6');
+    ageEl.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-age]'); if (!b) return;
+      $$('.age-chip', this).forEach(function (x) { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
+      b.classList.add('selected'); b.setAttribute('aria-pressed', 'true');
+      renderAgePanel(b.dataset.age);
+      S.wizard.age = b.dataset.age; save();
+    });
 
     $('#reviewTrack').innerHTML = D.REVIEWS.map(function (r) {
-      return '<div class="review"><div class="stars">' + '★'.repeat(r.stars) + '</div><blockquote>“' + esc(r.text) + '”</blockquote><div class="who">' + esc(r.name) + '<span>' + esc(r.note) + '</span></div></div>';
+      return '<div class="review"><div class="stars" aria-label="' + r.stars + ' out of 5">' + '★'.repeat(r.stars) + '</div><blockquote>“' + esc(r.text) + '”</blockquote><div class="who">' + esc(r.name) + '<span>' + esc(r.note) + '</span></div></div>';
     }).join('');
 
     var packs = [
@@ -429,51 +567,110 @@
       { n: 30, name: 'Chest of Stars', blurb: 'A month of stories, one every night: the bedtime ritual never stops.', tag: 'Most loved' },
       { n: 100, name: 'Sky of Stars', blurb: 'Months of tales, for brothers and sisters too.', tag: '' }
     ];
-    $('#starPacks').innerHTML = packs.map(function (p) {
-      return '<div class="pack ' + (p.tag ? 'popular' : '') + '">' + (p.tag ? '<span class="tag">' + p.tag + '</span>' : '') +
+    $('#starPacks').innerHTML = packs.map(function (p, i) {
+      return '<div class="pack ' + (p.tag ? 'popular' : '') + '" data-reveal="fade" style="--i:' + (i + 2) + '">' + (p.tag ? '<span class="tag">' + p.tag + '</span>' : '') +
         '<div class="amount">' + p.n + '<small>Stars</small></div><h4>' + esc(p.name) + '</h4><p>' + esc(p.blurb) + '</p>' +
         '<div class="free-line"><span class="free">Free · always</span></div>' +
         '<button class="btn-outline" data-pack="' + p.n + '">✦ ADD ' + p.n + ' FREE STARS</button></div>';
     }).join('');
 
     $('#faqList').innerHTML = D.FAQ.map(function (f) {
-      return '<div class="faq-item"><button class="faq-q">' + esc(f.q) + '<span class="plus">+</span></button><div class="faq-a"><p>' + esc(f.a) + '</p></div></div>';
+      return '<div class="faq-item"><button class="faq-q" aria-expanded="false">' + esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button><div class="faq-a"><p>' + esc(f.a) + '</p></div></div>';
     }).join('');
 
-    $('#musicChips').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-mood]'); if (!b) return;
-      A.setSound(true); syncSound(); A.previewMood(b.dataset.mood);
-      if (window.CWorld) window.CWorld.setMood(b.dataset.mood);
-      $$('.pill', this).forEach(function (x) { x.classList.remove('playing'); });
-      b.classList.add('playing'); setTimeout(function () { b.classList.remove('playing'); }, 1600);
-    });
-    $('#voiceGrid').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-voice]'); if (!b) return;
-      A.setSound(true); syncSound(); A.speak(D.VOICES[b.dataset.voice].line, 'en-IN');
-      toast(D.VOICES[b.dataset.voice].label + ' voice · ' + D.VOICES[b.dataset.voice].hint);
-    });
-    $('#ageChips').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-age]'); if (!b) return;
-      S.wizard.age = b.dataset.age; save(); renderWizard(); location.hash = '#/create';
-    });
     $('#starPacks').addEventListener('click', function (e) {
       var b = e.target.closest('[data-pack]'); if (!b) return;
       S.stars += parseInt(b.dataset.pack, 10); save(); syncStars(); toast('✦ ' + b.dataset.pack + ' Stars added to your pouch');
     });
     $('#faqList').addEventListener('click', function (e) {
       var q = e.target.closest('.faq-q'); if (!q) return;
-      q.parentNode.classList.toggle('open');
+      var item = q.parentNode;
+      var open = item.classList.toggle('open');
+      q.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
-    $('#revPrev').onclick = function () { $('#reviewTrack').scrollBy({ left: -440, behavior: 'smooth' }); };
-    $('#revNext').onclick = function () { $('#reviewTrack').scrollBy({ left: 440, behavior: 'smooth' }); };
+    $('#revPrev').onclick = function () { $('#reviewTrack').scrollBy({ left: -460, behavior: 'smooth' }); };
+    $('#revNext').onclick = function () { $('#reviewTrack').scrollBy({ left: 460, behavior: 'smooth' }); };
     $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
-    $('#soundDemo').addEventListener('click', function (e) {
-      var b = e.target.closest('.sound-word'); if (!b) return; soundTap(b);
-    });
     /* the hero teaser uses the same tap path as the reader: rest, haptic, duck */
     var heroPreview = $('.hero-preview');
     if (heroPreview) heroPreview.addEventListener('click', function (e) {
       var b = e.target.closest('.sound-word'); if (!b) return; soundTap(b);
+    });
+    if (window.CCursor && window.CCursor.refresh) window.CCursor.refresh();
+  }
+
+  /* ---- the music chapter: one shared little player ---- */
+  var homeAudible = false, homeMoodId = 'gentle';
+  function homeMood(id) {
+    homeMoodId = id;
+    var m = findMood(id);
+    var stage = $('#musicStage');
+    if (stage) stage.style.setProperty('--mood-glow', m.glow);
+    var nameEl = $('#musicNowName'); if (nameEl) nameEl.textContent = m.label;
+    var orb = $('#musicOrb'); if (orb) orb.classList.toggle('is-live', homeAudible);
+    var wave = $('#musicWave'); if (wave) wave.classList.toggle('is-live', homeAudible);
+    $$('.mood-btn').forEach(function (b) {
+      var on = b.dataset.mood === id;
+      b.classList.toggle('selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var play = $('#musicPlay');
+    if (play) { play.textContent = homeAudible ? '❚❚ PAUSE' : '▶ PLAY'; play.setAttribute('aria-pressed', homeAudible ? 'true' : 'false'); }
+    var state = $('#musicNowState');
+    if (state) state.textContent = homeAudible ? 'Playing · ' + m.hint : 'Tap to begin';
+    var st = $('#musicStage'); if (st) st.classList.toggle('audible', homeAudible);
+  }
+  function selectMood(id, preview) {
+    if (homeAudible) { A.startMusic(id); homeMood(id); return; }
+    homeMood(id);
+    if (preview) { A.setSound(true); syncSound(); A.previewMood(id); }
+  }
+  function playHomeMusic() {
+    A.setSound(true); syncSound();
+    A.startMusic(homeMoodId);
+    homeAudible = true;
+    homeMood(homeMoodId);
+    toast(D.MOODS.filter(function (m) { return m.id === homeMoodId; })[0].label + ' · playing softly');
+  }
+  function stopHomeMusic() {
+    A.stopMusic();
+    homeAudible = false;
+    homeMood(homeMoodId);
+  }
+  /* leaving the landing page must never leave a score running behind a form */
+  function pauseHomeMusic() { if (homeAudible) stopHomeMusic(); }
+
+  function renderVoiceSample(key) {
+    var v = D.VOICES[key] || D.VOICES.green;
+    var box = $('#voiceSample'); if (!box) return;
+    var passages = {
+      green: 'The forest was very quiet that night. Even the wind walked slowly, in soft slippers, so as not to wake the sleeping ferns.',
+      yellow: '“A dragon!” cried {name}, and the dragon — who had never been called anything so exciting — sat up at once and asked for a biscuit.',
+      blue: 'There are three things to know about the mountain. It is old, it is patient, and it keeps a door open for anyone who says please.',
+      red: 'The bridge was breaking, the lantern was swinging, and the wind was shouting — so {name} ran, ran, ran, one step ahead of the dark!'
+    };
+    box.style.setProperty('--v', v.css);
+    box.innerHTML = '<span class="vs-mark" aria-hidden="true">' + v.icon + '</span>' +
+      '<div><p class="vs-line">“' + esc(passages[key] || passages.green) + '”</p>' +
+      '<p class="vs-cue">' + esc(v.short) + ' · ' + esc(v.hint) + '</p>' +
+      '<div class="vs-actions"><button class="btn-outline" data-hear="' + key + '">▶ HEAR THE RHYTHM</button></div></div>';
+    var hear = $('[data-hear]', box);
+    if (hear) hear.onclick = function () { A.setSound(true); syncSound(); A.speak(v.line, 'en-IN'); };
+  }
+
+  function renderAgePanel(id) {
+    var a = D.AGES.filter(function (x) { return x.id === id; })[0] || D.AGES[2];
+    var panel = $('#agePanel'); if (!panel) return;
+    var sample = AGE_SAMPLE[a.id] || '';
+    panel.innerHTML = '<p class="ap-age">' + esc(a.label) + '</p>' +
+      '<p class="ap-hint">' + esc(a.hint) + '</p>' +
+      '<p class="ap-quote">“' + esc(sample.replace('{name}', 'Riya')) + '”</p>' +
+      '<div class="ap-meta"><span>sentences <b>' + a.sentences + '</b></span><span>words <b>' + esc(a.words) + '</b></span><span>voice <b>' + esc(a.bank === 'soft' ? 'warm &amp; lulling' : a.bank === 'bright' ? 'silly &amp; quick' : 'wise &amp; winding') + '</b></span></div>';
+    panel.classList.remove('swap'); void panel.offsetWidth; panel.classList.add('swap');
+    $$('.age-timeline .age-chip').forEach(function (b) {
+      var on = b.dataset.age === a.id;
+      b.classList.toggle('selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
   }
 
@@ -825,13 +1022,13 @@
       (story.fallbackNotice ? '<div class="notice">' + esc(story.fallbackNotice) + '</div>' : '') +
       '<div class="reader-toolbar">' +
       '<button class="tool-btn" id="musicToggle">' + (A.isMusicOn() ? '♫ Music on' : '♫ Music') + '</button>' +
-      '<button class="tool-btn" id="readToggle">🔊 Read to me</button>' +
+      '<button class="tool-btn" id="readToggle">Read to me</button>' +
       '<button class="tool-btn" id="fontMinus">A−</button><button class="tool-btn" id="fontPlus">A+</button>' +
       '<span class="spacer"></span>' +
       '<button class="tool-btn" id="copyStory">Copy text</button>' +
       '<button class="tool-btn" id="shareStory">↗ Share</button>' +
       '<button class="tool-btn" id="printStory">⎙ Print</button>' +
-      '<button class="tool-btn" id="deleteStory">🗑</button>' +
+      '<button class="tool-btn" id="deleteStory" title="Remove this story">Remove</button>' +
       '</div>' +
       '<div class="chapter-nav">' + story.chapters.map(function (c, i) { return '<button data-chap="' + i + '" title="' + esc(c.title) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' +
       chaptersHTML +
@@ -953,7 +1150,7 @@
   function toggleReadAloud(story) {
     var btn = $('#readToggle');
     if (reading) {
-      reading = false; A.stopSpeak(); btn.classList.remove('active'); btn.textContent = '🔊 Read to me';
+      reading = false; A.stopSpeak(); btn.classList.remove('active'); btn.textContent = 'Read to me';
       $$('.chapter').forEach(function (c) { c.style.boxShadow = ''; }); return;
     }
     A.setSound(true); syncSound();
@@ -962,14 +1159,14 @@
     function next() {
       if (!reading) return;
       if (i >= story.chapters.length) {
-        reading = false; btn.classList.remove('active'); btn.textContent = '🔊 Read to me';
+        reading = false; btn.classList.remove('active'); btn.textContent = 'Read to me';
         $$('.chapter').forEach(function (c) { c.style.boxShadow = ''; }); toast('The end · goodnight ✦'); return;
       }
       var idx = i++;
       $$('.chapter').forEach(function (c, j) { c.style.boxShadow = j === idx ? '0 0 0 1px var(--gold) inset' : ''; });
       var el = $('#chap-' + idx); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       var ok = A.speak(E.plainText(story.chapters[idx].text), lang, function () { setTimeout(next, 350); });
-      if (!ok) { reading = false; btn.textContent = '🔊 Read to me'; toast('Read-aloud is not available in this browser'); }
+      if (!ok) { reading = false; btn.textContent = 'Read to me'; toast('Read-aloud is not available in this browser'); }
     }
     reading = true; btn.classList.add('active'); btn.textContent = '⏹ Stop reading';
     next();
@@ -1019,7 +1216,7 @@
       return s.cfg.language === libFilter;
     });
     if (!list.length) {
-      $('#libraryGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="em">🌙</span><h3>' + (S.stories.length ? 'No stories in this shelf yet' : 'Your library is waiting for its first story') + '</h3><p class="small">One Star, thirty seconds, one tale that has never been told.</p><a class="pill-gold" href="#/create" style="margin-top:20px">✦ Write tonight’s story</a></div>';
+      $('#libraryGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="em" aria-hidden="true">✦</span><h3>' + (S.stories.length ? 'No stories in this shelf yet' : 'Your library is waiting for its first story') + '</h3><p class="small">One Star, thirty seconds, one tale that has never been told.</p><a class="pill-gold" href="#/create" style="margin-top:20px">✦ Write tonight’s story</a></div>';
     } else {
       $('#libraryGrid').innerHTML = list.map(function (s) {
         var st = findSetting(s.cfg.setting), md = findMood(s.cfg.mood);
@@ -1141,7 +1338,7 @@
       '<div class="how-grid" style="margin-top:22px;grid-template-columns:1fr"><div class="how-item"><b>Chrome, Edge, Android</b><p>Tap the browser menu → “Install app” / “Add to Home screen”. Or use the install button below if your browser offers it.</p></div>' +
       '<div class="how-item"><b>iPhone & iPad (Safari)</b><p>Tap Share → “Add to Home Screen”. storiesAI then opens full-screen, like a real app.</p></div>' +
       '<div class="how-item"><b>Desktop</b><p>Look for the install icon in the address bar, or use your browser menu. The app also works offline right here in the tab.</p></div></div>' +
-      '<div class="actions"><button class="pill-gold" id="modalInstall"' + (deferredInstall ? '' : ' disabled') + '>⬇ Install now</button><button class="btn-outline" id="closeInstall">Maybe later</button></div>' +
+      '<div class="actions"><button class="pill-gold" id="modalInstall"' + (deferredInstall ? '' : ' disabled') + '">↓ Install now</button><button class="btn-outline" id="closeInstall">Maybe later</button></div>' +
       '<p class="note">If the button is disabled, your browser may already have storiesAI installed, or it does not offer a direct install prompt — use the menu steps above.</p>',
       function (m, close) {
         $('#closeInstall', m).onclick = close;
@@ -1224,7 +1421,7 @@
     $('#installFooter').onclick = installModal;
     $('#installBtn').onclick = function () { if (deferredInstall) { deferredInstall.prompt(); } else { installModal(); } };
     $('#menuBtn').onclick = function () {
-      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>📚 My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="10">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
+      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="10">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
         function (m, close) {
           $$('[data-close]', m).forEach(function (a) { a.onclick = function () { close(); }; });
           /* the AWAKE / ASLEEP rail is a phone-friendly line only, so the night
@@ -1265,9 +1462,16 @@
           };
         });
     };
-    if (S.cookie === null) $('#cookieBanner').style.display = 'flex';
-    $('#cookieAccept').onclick = function () { S.cookie = 'all'; save(); $('#cookieBanner').style.display = 'none'; };
-    $('#cookieReject').onclick = function () { S.cookie = 'essential'; save(); $('#cookieBanner').style.display = 'none'; };
+    /* one slim bar, delayed a moment so the prologue is never covered */
+    if (S.cookie === null) setTimeout(function () {
+      var c = $('#cookieBanner');
+      if (c) { c.style.display = 'flex'; requestAnimationFrame(function () { c.classList.add('show'); }); }
+    }, 2600);
+    function hideCookie() { var c = $('#cookieBanner'); if (c) { c.classList.remove('show'); setTimeout(function () { c.style.display = 'none'; }, 420); } }
+    $('#cookieAccept').onclick = function () { S.cookie = 'all'; save(); hideCookie(); toast('Thank you ✦'); };
+    $('#cookieReject').onclick = function () { S.cookie = 'essential'; save(); hideCookie(); };
+    var inline = $('#cookiePrefsInline');
+    if (inline) inline.onclick = function () { hideCookie(); cookieModal(); };
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('#modalRoot').innerHTML = ''; } });
   }
 
@@ -1278,6 +1482,9 @@
     var hero = $('#heroSoundLabel'); if (hero) hero.textContent = on ? 'SOUND ON' : 'LISTEN WITH SOUND';
     $('#soundBtn').classList.toggle('playing', on);
     $('#heroSound').classList.toggle('playing', on);
+    var sb = $('#soundBtn'), hb = $('#heroSound');
+    if (sb) { sb.setAttribute('aria-pressed', on ? 'true' : 'false'); sb.setAttribute('aria-label', on ? 'Sound on — tap to silence the story' : 'Sound off — tap to listen with sound'); }
+    if (hb) hb.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
   function toggleSound(startMusic) {
     var on = !A.isSoundOn();
@@ -1308,9 +1515,15 @@
 
   /* ---------------- routing ---------------- */
   function showView(name) {
-    $$('.view').forEach(function (v) { v.classList.remove('active'); });
+    $$('.view').forEach(function (v) {
+      var on = v.id === 'view-' + name;
+      v.classList.toggle('active', on);
+      if ('inert' in v) v.inert = !on;
+      if (on) v.removeAttribute('aria-hidden'); else v.setAttribute('aria-hidden', 'true');
+    });
     var el = $('#view-' + name);
     if (el) el.classList.add('active');
+    if (window.CCursor && window.CCursor.refresh) setTimeout(function () { window.CCursor.refresh(); }, 60);
     if (name !== 'story') {
       clearTheme(); A.stopMusic(); A.stopSpeak(); reading = false;
       wakeOff(); stopReadingFocus(); A.nightMode(false);
@@ -1320,6 +1533,7 @@
       if (window.CStars && window.CStars.setScene) window.CStars.setScene(null);
     }
     document.body.classList.toggle('app-view', name !== 'home');
+    if (name !== 'home' && typeof pauseHomeMusic === 'function') pauseHomeMusic();
     if (name === 'home') {
       $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
       if (window.__sceneUpdate) setTimeout(window.__sceneUpdate, 60);
@@ -1359,7 +1573,11 @@
       if (!sc) return;
       e.preventDefault();
       var idx = parseInt(sc.getAttribute('data-scene'), 10);
-      var go = function () { var el = $$('.scene')[idx]; if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+      var go = function () {
+        var el = $$('.scene')[idx];
+        if (!el) { var target = document.getElementById(sc.getAttribute('data-target')); el = target; }
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: el.classList.contains('scene') ? 'center' : 'start' });
+      };
       if (location.hash !== '#/home') { location.hash = '#/home'; setTimeout(go, 160); } else go();
     });
     route();
@@ -1411,7 +1629,7 @@
     if (st.snoozeUntil && st.snoozeUntil > Date.now()) return;
     if (isStandalone()) return;                      /* already living on the home screen */
     var cookie = $('#cookieBanner');
-    if (S.cookie === null && cookie && cookie.style.display !== 'none') return; /* one card at a time */
+    if (S.cookie === null && cookie && cookie.classList.contains('show')) return; /* one card at a time */
 
     clearTimeout(installTimer);
     installTimer = setTimeout(function () {
@@ -1472,7 +1690,7 @@
   }
 
   function boot() {
-    renderHome(); window.__sceneUpdate = initScenes();
+    renderHome(); window.__sceneUpdate = initScenes(); initParallax();
     if (window.CCursor) window.CCursor.init();
     initMotion(); initWizard(); initLibrary(); initOverlays(); initSound(); initRouting(); initPWA(); initDebug();
     syncStars();

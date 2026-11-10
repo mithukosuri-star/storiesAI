@@ -5,6 +5,7 @@ window.CAudio = (function () {
   /* sleep-conducive state: a low-pass "night curtain" over everything, a tempo
      scale the chord clock reads, and the interrupt fade for a locked screen */
   var nightFilter = null, nightOn = false, tempoScale = 1, tempoTimer = 0, idleTimer = 0;
+  var muted = false;   /* silences the score only — golden words keep speaking */
 
   function ensure() {
     if (!ctx) {
@@ -128,7 +129,7 @@ window.CAudio = (function () {
     mood = cfg; step = 0; musicOn = true;
     musicBus.gain.cancelScheduledValues(now());
     musicBus.gain.setValueAtTime(musicBus.gain.value, now());
-    musicBus.gain.linearRampToValueAtTime(0.85, now() + 1.6);
+    musicBus.gain.linearRampToValueAtTime(muted ? 0.0001 : 0.85, now() + 1.6);
     chord(cfg);
     loop = setInterval(function () { if (musicOn) chord(mood); }, cfg.pace * 1000 * tempoScale);
   }
@@ -243,6 +244,7 @@ window.CAudio = (function () {
   function playSfx(key) {
     if (!soundOn) { ensure(); }
     duck();
+    if (muted && musicBus && ctx) musicBus.gain.setTargetAtTime(0.0001, now(), 0.2);
     (SFX_PLAYERS[key] || SFX_PLAYERS.twinkle)();
   }
 
@@ -252,6 +254,14 @@ window.CAudio = (function () {
     var v = on ? (nightOn ? 0.34 : 0.85) : 0.0001;
     if (master && ctx) master.gain.setTargetAtTime(v, now(), 0.15);
   }
+  /* Mute is independent of on/off: the score is silenced, effects keep a voice.
+     Useful at bedtime when only the golden words should be heard. */
+  function setMuted(on) {
+    muted = !!on;
+    if (musicBus && ctx) musicBus.gain.setTargetAtTime(muted ? 0.0001 : (musicOn ? 1 : 0), now(), 0.25);
+    return muted;
+  }
+  function isMuted() { return muted; }
 
   /* ---- read aloud using the device's own voices (no network) ----
      Long text is split into short utterances: some browsers truncate a single long one. */
@@ -297,6 +307,7 @@ window.CAudio = (function () {
   return {
     ensure: ensure, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
     playSfx: playSfx, setSound: setSound, isSoundOn: function () { return soundOn; },
+    setMuted: setMuted, isMuted: isMuted,
     getDiagnostics: getDiagnostics,
     speak: speak, stopSpeak: stopSpeak, isSpeaking: isSpeaking,
     nightMode: nightMode, isNight: function () { return nightOn; },
