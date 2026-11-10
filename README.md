@@ -75,7 +75,7 @@ scenes; the rail is also a chapter menu on hover.
 | **Create a story** | 5-step wizard: hero name(s) and type (single tale / bedtime series) → age group and length → value → place → mood, story language, optional little villain, free-text extras. Live "Tonight's ingredients" summary and Stars pouch. |
 | **Story engine (offline)** | Seeded, age-aware sentence banks (`soft` / `bright` / `wise`) compose 3–5 chapters (~3, 5 or 7 minutes), insert tappable sound words, assign a voice colour per chapter, write a title and three discussion questions. Different every run. No API, no cost. |
 | **Generating screen** | "Weaving tonight's story…" progress; the reader opens on its own. |
-| **Reader** | Colours and scenery change with the story (12 settings × 4 moods → inline SVG worlds), per-chapter voice guidance, golden sound words, read-aloud, font size, share, print, series continuation, three "let's talk about it" questions, theme resets when you leave. |
+| **Reader** | A bookmark rail follows the chapter you are reading; the paragraph under the eye lifts instead of the rest dimming. Colours and scenery change with the story (12 settings × 4 moods → inline SVG worlds), per-chapter voice guidance, golden sound words, read-aloud, font size, share, print, series continuation, three "let's talk about it" questions, theme resets when you leave. |
 | **Library** | Saved on the device, filters (All / English / Hindi / Bengali / Series), JSON export + import, delete, Star pouch, stable invite code. |
 | **Languages** | English interface; stories in **English**, **हिन्दी** or **বাংলা**. Read-aloud uses the device voices (`en-IN` / `hi-IN` / `bn-IN`). |
 | **Audio** | Everything is synthesised live with the Web Audio API — four ambient mood scores and twelve sound effects. No audio files. |
@@ -173,6 +173,7 @@ behaviour that CSS + one rAF ticker already give.
 
 | Layer | How it works |
 |---|---|
+| **Reader rail** | One more observer tracks the chapter in view: the left-edge bookmark fills and the chapter dots follow the eye, with no scroll loop. |
 | **Reveals** | `[data-reveal]` + one `IntersectionObserver`. Copy arrives once (opacity + 26 px lift, or a `clip-path` "widow" wipe for display headings), staggered with `--i`, then stays crisp. The old build dimmed every scene to ~30 % unless it was dead-centre; that is gone. |
 | **Entrance** | A CSS-only veil (`animation: veilLift`) lifts over the first 2 s, and the hero copy has its own timed sequence — plus a late `heroFallback` so the headline can never stay invisible if a script fails. |
 | **Scroll link** | One shared rAF ticker drives: the chapter rail + dot, the chapter label, the sky mode (`CStars` / `CWorld`), the scene drift (numerals and ornaments travel slower than the page, and brighten as they cross the viewport) and the WebGL camera progress. Transform-only writes. |

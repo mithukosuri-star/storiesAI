@@ -73,3 +73,32 @@ land on the scene their label names, mood → play → mute → stop, golden-wor
 colour selection, age panel swap, FAQ expand, free-Stars modal, and a full wizard →
 weaving → reader → library run (3 → 2 Stars, one story saved). Reduced-motion run: all
 reveals visible, no transform animations, tab order starts at the skip link.
+
+## Final refinement pass · every remaining weakness
+
+A full audit of the built page (landing + wizard + reader + library + dialogs) at
+desktop and phone widths, with the actual console, the actual audio, the actual
+storage and an automated small-text contrast sweep. What was still wrong, and what
+was changed:
+
+### Bugs found by testing, not by looking
+| Found | Cause | Fix |
+|---|---|---|
+| The reader toolbar drifted up **under** the fixed chrome while scrolling | `overflow-x:hidden` on `body` makes it a scroll container, which silently kills `position:sticky` on every descendant | `overflow-x:clip` on `html`/`body` |
+| Route changes flew through 15,000 px of the landing page | `html{scroll-behavior:smooth}` also applied to `window.scrollTo(0,0)` | explicit `behavior:'instant'` on route change |
+| The music chapter's "pin" never pinned | scene height equalled sticky height, so there was no travel | scene `min-height:168svh`, sticky `100svh`, composition compacted to fit |
+| The topbar scrim had been neutralised | `isolation:isolate` on `::before` created its own stacking context, so `z-index:-1` no longer went behind the bar | isolate on `.topbar`, scrim pinned at `top:-26px` with its own height |
+| FAQ answers clipped | hard-coded `max-height:360px` | measured `scrollHeight`, `hidden` when closed, real `aria-controls`/`role=region` |
+| Small text failed AA | `--dim` was 4.5:1, corner labels 3.6:1, footer links 4.0:1 | dim tier lifted to ~6.2:1, corner/footer/meta moved to ≥5.5:1 (swept automatically until clean) |
+| Emoji on story covers and in the sound feedback | platform-dependent glyphs broke the hairline icon language | drawn `ICONS` mappings + `✦` |
+
+### What was made to feel handcrafted
+- **Chapter transitions** — every scene now carries a soft accent bloom into the next; two enormous drifting light pools breathe behind the whole night (64 s, off for reduced motion and on phones).
+- **One button vocabulary** — outline, gold, pill, tool, circle and card all answer with the same hairline warmth, 1 px press and gold bloom; one gold focus ring everywhere.
+- **The music chapter** — genuinely pinned now: the composition holds still for 68 svh while the sky passes behind it.
+- **The wizard** — directional page-turn between steps, numbered progress with `aria-valuenow`, inline validation (shake + `role=alert`), a sticky primary bar on phones, help text in the script voice.
+- **The reader** — a bookmark rail down the left edge that fills per chapter, chapter dots that follow the eye instead of only clicks, a no-wrap toolbar, a page with a lit spine, and paragraph focus that *lifts* the current line instead of dimming the rest to 35 %.
+- **The library** — drawn glyph covers, hairline metal frame, an empty state that reads like an invitation.
+- **The menu** — three doors and a settings list instead of nine identical pills.
+- **Performance** — the particle sky pauses behind any dialog and only runs at full strength on the landing page; a hidden tab for over two minutes frees the WebGL context and rebuilds it on return. Measured: LCP 453 ms, CLS 0.001, ~800 DOM nodes.
+- **Accessibility** — skip link, focus trap + restore + Esc in dialogs, `aria-live` toast that re-announces, chapter dots with real labels, progress semantics, and a contrast sweep that now reports zero failures.

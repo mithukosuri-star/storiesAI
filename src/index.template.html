@@ -22,6 +22,7 @@
 <!-- entrance veil: pure CSS so it always lifts, with or without JS -->
 <div class="veil" aria-hidden="true"><span class="veil-mark">stories<em>AI</em></span><span class="veil-star">✦</span></div>
 <a class="skip-link" href="#main">Skip to the story</a>
+<div class="scroll-progress" aria-hidden="true"><i id="scrollProgress"></i></div>
 <canvas id="world" aria-hidden="true"></canvas>
 <canvas id="starfield" aria-hidden="true"></canvas>
 <div class="grain" aria-hidden="true"></div>
@@ -250,12 +251,18 @@
     <div class="page-head"><p class="eyebrow">THE STORYTELLER'S DESK</p><h2 class="display">Let's make <span class="gold-script">tonight's tale</span></h2><p class="quiet">Six little choices. About thirty seconds. One story never told before.</p></div>
     <div class="wizard-shell">
       <div class="wizard">
-        <div class="progress" id="wizProgress"></div>
+        <div class="wiz-head"><span class="wiz-step-label" id="wizStepLabel">STEP 1 OF 5</span><div class="progress" id="wizProgress"></div></div>
         <div class="step active" data-step="0">
           <div class="roman">I · THE HERO</div>
           <h3 class="display-sm">What is <span class="gold-script">their name?</span></h3>
           <p class="quiet">More than one hero? Separate names with a comma or “and” — they will all be in the story.</p>
-          <div class="field"><label>NAME(S)</label><input class="input" id="namesInput" maxlength="160" placeholder="e.g. Riya and Kabir" autocomplete="off"></div>
+          <div class="field">
+            <label for="namesInput">NAME(S)</label>
+            <input class="input" id="namesInput" maxlength="160" placeholder="e.g. Riya and Kabir" autocomplete="off"
+                   aria-describedby="nameHelp nameError">
+            <p class="field-hint" id="nameHelp">One name, or two for siblings — they will all be in the story.</p>
+            <p class="field-error" id="nameError" role="alert" aria-live="assertive"></p>
+          </div>
           <div class="field"><label>WHAT SHALL WE WRITE?</label><div class="choice-grid" id="choiceType" style="grid-template-columns:repeat(2,1fr)"></div></div>
         </div>
         <div class="step" data-step="1">
@@ -342,12 +349,12 @@
       <aside>
         <div class="wallet">
           <p class="eyebrow">YOUR POUCH</p>
-          <div class="wallet-n"><span id="walletStars">3</span> ✦</div>
+          <div class="wallet-n"><span id="walletStars">3</span><span class="coin" aria-hidden="true">✦</span></div>
           <p class="quiet small">One Star weaves one story. Stars are a gift in this edition.</p>
           <button class="pill-gold" id="addStarsBtn">✦ ADD FREE STARS</button>
           <hr>
           <p class="quiet small">Invite a friend — share your code</p>
-          <div class="code"><span id="inviteCode">STORIESAI-…</span><button class="circle-btn" id="copyCode" title="Copy code">⧉</button></div>
+          <div class="code"><span id="inviteCode">STORIESAI-…</span><button class="circle-btn" id="copyCode" title="Copy invite code" aria-label="Copy invite code"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></svg></button></div>
           <hr>
           <button class="btn-outline" id="exportBtn" style="width:100%">↓ EXPORT MY STORIES</button>
           <button class="btn-outline" id="importBtn" style="width:100%;margin-top:8px">↑ IMPORT A BACKUP</button>

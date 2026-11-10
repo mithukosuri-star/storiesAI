@@ -1,5 +1,5 @@
 /* storiesAI service worker — offline-first app shell. Cross-origin AI calls are never cached. */
-const CACHE = 'storiesai-shell-v12';
+const CACHE = 'storiesai-shell-v13';
 const SHELL = [
   './',
   './index.html',

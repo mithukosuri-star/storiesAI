@@ -29,7 +29,7 @@
 :root{
   /* atmosphere */
   --bg:#05040f; --bg-2:#0a0918; --panel:#16122e; --panel-2:#1b1738;
-  --ink:#f7f0e2; --ink-2:rgba(247,240,226,.82); --muted:#a6a3c4; --dim:#76739a;
+  --ink:#f7f0e2; --ink-2:rgba(247,240,226,.86); --muted:#b3b0cf; --dim:#8f8cb2;
   --gold:#f3d38a; --gold-2:#f7c96b; --gold-deep:#c9a45f;
   --line:rgba(243,211,138,.22); --line-soft:rgba(247,240,226,.10);
   --serif:'Fraunces',Georgia,'Times New Roman',serif;
@@ -42,14 +42,20 @@
   --ease-soft:cubic-bezier(.4,0,.2,1);
   --chrome-h:78px;
   --measure:62ch;
+  /* spacing rhythm — every scene spacing step comes from this scale */
+  --s1:6px; --s2:12px; --s3:18px; --s4:26px; --s5:38px; --s6:56px; --s7:84px;
+  /* one gold for pressure states, so no two buttons feel foreign */
+  --press:rgba(243,211,138,.16);
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;background:#05040f;overflow-x:hidden}
+html{scroll-behavior:smooth;background:#05040f;overflow-x:clip}
 body{
-  margin:0;background:#05040f;color:var(--ink);overflow-x:clip;
+  margin:0;background:#05040f;color:var(--ink);
   font-family:var(--body);font-size:15.5px;line-height:1.75;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  overflow-x:hidden;position:relative;
+  /* clip, never hidden: `overflow-x:hidden` makes the body a scroll container
+     and every position:sticky inside it stops sticking to the viewport */
+  overflow-x:clip;position:relative;
 }
 /* the night is its own fixed layer — not a body background, so iOS Safari
    cannot scroll it away and Android does not repaint the page each frame */
@@ -103,7 +109,7 @@ body.app-view .sound-fixed{display:none}
 #chrome a,#chrome button,#chrome .rail{pointer-events:auto}
 .topbar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:22px;
   padding:26px clamp(20px,4vw,56px);transition:transform .6s var(--ease),opacity .4s}
-.topbar::before{content:"";position:absolute;left:0;right:0;top:0;height:190px;z-index:-1;pointer-events:none;
+.topbar::before{content:"";position:absolute;left:0;right:0;top:0;height:190px;z-index:-1;pointer-events:none;isolation:isolate;
   background:linear-gradient(180deg,rgba(5,4,15,.95) 0%,rgba(5,4,15,.66) 44%,rgba(5,4,15,0) 100%)}
 .wordmark{font-family:var(--serif);font-style:italic;font-weight:300;font-size:29px;letter-spacing:-.022em;color:var(--ink);white-space:nowrap;line-height:1}
 .wordmark span{color:var(--gold);font-style:normal;font-weight:400;letter-spacing:.02em}
@@ -152,7 +158,7 @@ body.app-view .sound-fixed{display:none}
 .rail-links li{margin:8px 0}
 .rail-links a{font-family:var(--ui);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);transition:color .2s}
 .rail-links a:hover{color:var(--gold)}
-.corner{position:absolute;bottom:28px;font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);background:none;border:0}
+.corner{position:absolute;bottom:28px;font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(247,240,226,.56);background:none;border:0;transition:color .25s}
 .chapter-label{left:clamp(20px,4vw,56px)}
 .sound-fixed{right:clamp(20px,4vw,56px);display:flex;align-items:center;gap:10px;transition:color .2s}
 .sound-fixed:hover{color:var(--gold)}
@@ -287,9 +293,9 @@ body.app-view .sound-fixed{display:none}
    The reference never puts copy and controls side by side: the heading
    is centred, and the four moods are a full-width row of labelled circles.
    ============================================================ */
-.pin-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(24px,3.4vh,38px);align-items:center;justify-items:center;text-align:center;width:100%;max-width:1080px;min-width:0}
-.pin-copy .display,.pin-copy .spread-head{margin-bottom:20px}
-.pin-copy .lede{margin-inline:auto}
+.pin-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(18px,2.6vh,30px);align-items:center;justify-items:center;text-align:center;width:100%;max-width:1080px;min-width:0}
+.pin-copy .display,.pin-copy .spread-head{margin-bottom:16px;font-size:clamp(30px,3.9vw,54px)}
+.pin-copy .lede{margin-inline:auto;font-size:clamp(16px,1.5vw,19px);line-height:1.8;margin-bottom:0}
 .music-stage{width:100%;max-width:820px;border:0;background:none;padding:0;position:relative}
 .music-orb{width:clamp(64px,7.2vw,86px);aspect-ratio:1;border-radius:50%;margin:0 auto clamp(14px,2.2vh,20px);position:relative;display:grid;place-items:center;
   background:radial-gradient(circle at 36% 30%,rgba(255,246,220,.92),color-mix(in srgb,var(--mood-glow,#f3d38a) 62%,#3a2f57) 54%,#0d0a1e 86%);
@@ -299,10 +305,10 @@ body.app-view .sound-fixed{display:none}
 .music-orb.is-live::after{animation:orbPulse 4.2s ease-in-out infinite}
 @keyframes orbPulse{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.10);opacity:.85}}
 .music-orb .glyph{font-family:var(--serif);font-size:20px;color:#241a10;opacity:.45}
-.music-now{text-align:center;margin-bottom:clamp(14px,2.4vh,20px)}
+.music-now{text-align:center;margin-bottom:clamp(10px,1.8vh,16px)}
 .music-now b{display:block;font-family:var(--script);font-style:italic;font-weight:400;font-size:clamp(23px,2.6vw,30px);color:var(--ink);line-height:1.2}
 .music-now span{display:block;font-family:var(--ui);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-top:7px;opacity:.85}
-.music-wave{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px;margin:0 auto clamp(16px,2.6vh,22px);opacity:.85}
+.music-wave{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:30px;margin:0 auto clamp(12px,2vh,18px);opacity:.85}
 .music-wave i{display:block;width:2.5px;border-radius:2px;background:linear-gradient(var(--gold),rgba(243,211,138,.12));height:calc(var(--h,40) * 1%);transition:height .9s var(--ease),opacity .4s}
 .music-wave.is-live i{animation:wave 1.9s ease-in-out infinite;animation-delay:calc(var(--k,0) * 90ms)}
 @keyframes wave{0%,100%{height:calc(var(--h,40) * .4% * 1);opacity:.5}50%{height:calc(var(--h,40) * 1%);opacity:1}}
@@ -313,7 +319,7 @@ body.app-view .sound-fixed{display:none}
 .music-controls .btn-outline:hover,.music-controls .btn-outline[aria-pressed="true"]{color:var(--gold);background:none;border:0}
 .music-controls .btn-outline:hover::after{opacity:.75}
 /* four moods, four circles — the reference's "music made to measure" row */
-.music-moods{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,1.6vw,20px);margin-top:clamp(30px,5vh,48px);align-items:start}
+.music-moods{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,1.6vw,20px);margin-top:clamp(22px,3.4vh,34px);align-items:start}
 .mood-btn{display:flex;flex-direction:column;align-items:center;gap:14px;border:0;background:none;padding:0;text-align:center}
 .mood-btn i{width:clamp(46px,5.4vw,66px);aspect-ratio:1;border-radius:50%;flex:none;
   background:radial-gradient(circle at 34% 30%,rgba(255,248,228,.72),color-mix(in srgb,var(--m) 62%,#221a3c) 56%,#100c22 92%);
@@ -327,7 +333,7 @@ body.app-view .sound-fixed{display:none}
 .mood-btn.selected i{box-shadow:0 0 0 1px color-mix(in srgb,var(--m) 70%,transparent),0 0 54px 8px color-mix(in srgb,var(--m) 30%,transparent)}
 .mood-btn.selected b{color:#fff6dc}
 .mood-btn.selected small{color:var(--ink-2)}
-.music-hint{font-family:var(--script);font-style:italic;font-size:15px;letter-spacing:0;text-transform:none;color:var(--dim);text-align:center;margin:clamp(24px,4vh,34px) 0 0;line-height:1.7}
+.music-hint{font-family:var(--script);font-style:italic;font-size:15px;letter-spacing:0;text-transform:none;color:var(--dim);text-align:center;margin:clamp(16px,2.6vh,24px) 0 0;line-height:1.7}
 
 /* ============================================================
    IV · THE SOUNDS
@@ -350,7 +356,7 @@ body.app-view .sound-fixed{display:none}
 @keyframes wordGlow{0%,100%{filter:drop-shadow(0 0 3px rgba(243,211,138,.4))}50%{filter:drop-shadow(0 0 14px rgba(243,211,138,.85))}}
 .sound-word.tapped .sw-dot{animation:pop .6s}
 @keyframes pop{0%{transform:rotate(-1deg) scale(1)}40%{transform:rotate(-1deg) scale(1.13)}100%{transform:rotate(-1deg) scale(1)}}
-.sound-feedback{display:flex;align-items:center;justify-content:center;gap:10px;min-height:22px;margin-top:26px;font-family:var(--ui);font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--dim);transition:color .3s}
+.sound-feedback{display:flex;align-items:center;justify-content:center;gap:10px;min-height:22px;margin-top:26px;font-family:var(--ui);font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:rgba(247,240,226,.56);transition:color .3s}
 .sound-feedback.active{color:var(--gold)}
 
 /* ============================================================
@@ -396,7 +402,7 @@ body.app-view .sound-fixed{display:none}
 .age-panel .ap-age{font-family:var(--serif);font-weight:200;font-size:clamp(34px,5vw,62px);line-height:1;letter-spacing:-.04em;color:var(--ink);margin:0 0 8px}
 .age-panel .ap-hint{font-family:var(--ui);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:0 0 24px}
 .age-panel .ap-quote{font-family:var(--script);font-style:italic;font-size:clamp(18px,2.1vw,26px);line-height:1.7;color:rgba(247,240,226,.9);margin:0 auto 20px;max-width:44ch}
-.age-panel .ap-meta{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;font-family:var(--ui);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+.age-panel .ap-meta{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;font-family:var(--ui);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:rgba(247,240,226,.58)}
 .age-panel .ap-meta b{color:var(--ink-2);font-weight:400}
 .age-panel.swap{animation:ageSwap .55s var(--ease)}
 @keyframes ageSwap{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -408,7 +414,7 @@ body.app-view .sound-fixed{display:none}
 .counter span{font-family:var(--serif);font-weight:200;font-size:clamp(56px,9vw,124px);line-height:.95;color:var(--gold);display:block;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
 .counter p{font-family:var(--ui);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin:12px 0 0}
 .review-track{max-width:1000px;margin-inline:auto;display:flex;gap:clamp(16px,2.4vw,30px);overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 26px;scrollbar-width:none;text-align:left;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 76%,transparent 98%);mask-image:linear-gradient(90deg,transparent,#000 3%,#000 76%,transparent 98%)}
 .review-track::-webkit-scrollbar{display:none}
 .review-track::-webkit-scrollbar{height:4px}
 .review-track::-webkit-scrollbar-thumb{background:rgba(243,211,138,.3)}
@@ -418,7 +424,7 @@ body.app-view .sound-fixed{display:none}
 .review .stars{color:var(--gold);letter-spacing:.26em;font-size:10px;opacity:.9}
 .review blockquote{font-family:var(--script);font-style:italic;font-size:21px;line-height:1.6;margin:16px 0 22px;color:var(--ink)}
 .review .who{font-family:var(--ui);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
-.review .who span{display:block;color:var(--dim);font-size:9px;margin-top:5px}
+.review .who span{display:block;color:rgba(247,240,226,.55);font-size:9px;margin-top:5px;letter-spacing:.18em}
 .review-nav{display:flex;gap:10px;justify-content:center;margin-top:12px}
 
 /* ============================================================
@@ -624,7 +630,7 @@ body.is-offline .offline-badge{display:block}
 @media(max-width:1080px){
   .pin-wrap{grid-template-columns:1fr;gap:34px}
   .pin-copy{text-align:center}
-  .pin-copy .quiet,.pin-copy .lede{margin-inline:auto}
+  .pin-copy .quiet,.pin-copy .lede{margin-inline:auto;font-size:clamp(16px,1.5vw,19px);line-height:1.8;margin-bottom:0}
   .ledger{grid-template-columns:repeat(2,1fr)}
   .ledger-item:nth-child(2n){border-right:0}
   .ledger-item:nth-child(n+3){border-top:1px solid var(--line-soft)}
@@ -751,9 +757,12 @@ body.is-offline .offline-badge{display:block}
 
 /* the music chapter: the copy and the player stay on screen while the night
    drifts past — a native sticky pin, so scrolling is never hijacked */
-.scene.pin-scene{display:block;padding-top:0;padding-bottom:0;min-height:100svh}
-.scene.pin-scene .pin-sticky{position:sticky;top:0;min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;
-  padding:clamp(96px,14vh,150px) 7vw}
+/* The chapter is *pinned*: the composition holds still while 68svh of scroll
+   passes underneath it. The scene therefore needs travel beyond one screen —
+   with scene height == sticky height there is no room and `sticky` is a no-op. */
+.scene.pin-scene{display:block;padding-top:0;padding-bottom:0;min-height:168svh}
+.scene.pin-scene .pin-sticky{position:sticky;top:0;height:100svh;min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;
+  padding:clamp(84px,10.5vh,116px) 7vw clamp(46px,7vh,74px)}
 @media(max-width:760px){.scene.pin-scene{padding:108px 22px 72px}.scene.pin-scene .pin-sticky{padding:0}}
 /* only pin when the whole composition actually fits: on a laptop-width or a
    short screen the two panes are taller than the viewport, and a sticky pin
@@ -819,12 +828,427 @@ body.app-view .veil{display:none}
   font-family:var(--ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;padding:12px 20px;border-radius:0 0 12px 12px;transition:top .25s var(--ease)}
 .skip-link:focus-visible{top:0;outline:2px solid #fff;outline-offset:2px}
 #main:focus{outline:none}
+
+/* ============================================================
+   LAYER 4 · THE FINAL PASS
+   One vocabulary for every surface: the same hairline, the same
+   gold pressure state, the same arrival curve. Sections stop
+   feeling like separate documents.
+   ============================================================ */
+
+/* ---- 1 · chapter transitions -------------------------------------------
+   The reference never cuts between screens: each chapter's light bleeds
+   into the next. A full-bleed gradient sits between scenes and fades the
+   previous chapter's accent colour into the next one's. */
+.scenes{--prev:#f3d38a}
+.scene::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:clamp(120px,22vh,240px);pointer-events:none;z-index:0;
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--scene-accent) 7%,transparent) 62%,transparent);
+  opacity:.5;mix-blend-mode:screen}
+.scene.end::after,.scene.hero::after{display:none}
+
+/* a slow breath over the whole night: two enormous, out-of-focus pools of
+   colour that drift on a 60-second loop. Motion you feel, never watch. */
+body::after{content:"";position:fixed;inset:-12%;z-index:-1;pointer-events:none;opacity:.5;
+  background:
+    radial-gradient(38% 32% at 22% 28%,rgba(120,104,196,.20),transparent 68%),
+    radial-gradient(34% 30% at 78% 62%,rgba(243,211,138,.10),transparent 70%),
+    radial-gradient(30% 26% at 60% 12%,rgba(96,140,200,.13),transparent 72%);
+  animation:nightBreath 64s ease-in-out infinite alternate;-webkit-transform:translateZ(0);transform:translateZ(0)}
+@keyframes nightBreath{0%{transform:scale(1) translate3d(0,0,0)}100%{transform:scale(1.10) translate3d(-1.5%,1.2%,0)}}
+body.app-view::after{opacity:.26}
+
+/* ---- 2 · one button system ---------------------------------------------
+   Every pressable surface answers the same way: a hairline that warms,
+   a small lift, and a gold bloom. Nothing scales, nothing shouts. */
+.btn-outline,.pill-outline,.pill,.tool-btn,.circle-btn,.icon-btn,.choice,.story-card,.quiet-link,.faq-q{
+  transition:border-color .32s var(--ease-soft),background-color .32s var(--ease-soft),color .32s var(--ease-soft),
+             box-shadow .42s var(--ease),transform .42s var(--ease),opacity .3s}
+.btn-outline:hover,.pill-outline:hover{border-color:rgba(243,211,138,.72);box-shadow:0 0 32px -8px rgba(243,211,138,.42),inset 0 0 0 1px rgba(243,211,138,.14)}
+.btn-outline:active,.pill-outline:active,.pill:active,.tool-btn:active,.choice:active,.icon-btn:active,.circle-btn:active{
+  transform:translateY(1px) scale(.994);background-color:var(--press)}
+.pill-gold:active{transform:translateY(1px) scale(.994);filter:saturate(1.1) brightness(.97)}
+/* a single gold focus ring everywhere, never the browser's blue */
+:focus-visible{outline:1.5px solid var(--gold);outline-offset:3px}
+.btn-outline:focus-visible,.pill-gold:focus-visible,.pill:focus-visible,.tool-btn:focus-visible{
+  outline:1.5px solid var(--gold);outline-offset:3px;box-shadow:0 0 0 5px rgba(243,211,138,.12)}
+
+/* ---- 3 · typographic finishing ----------------------------------------
+   Drop caps and small-caps numerals were doing nothing. What was missing
+   was *optical* alignment: headings hung on their own left edge, quotes
+   never used a hanging punctuation, and the body never got proper
+   hyphenation in narrow columns. */
+.display,.display-sm,.big-line,.script-huge,.age-panel .ap-age{font-kerning:normal;font-variant-ligatures:common-ligatures}
+.review blockquote,.voice-sample .vs-line,.age-panel .ap-quote,.sound-demo{text-wrap:pretty}
+.lede,.quiet,.how-item p,.faq-a p{text-wrap:pretty}
+/* the small caps label row: a hairline dot between items, not a raw mid-dot */
+.eyebrow{display:inline-flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:14px;height:1px;background:linear-gradient(90deg,transparent,currentColor);opacity:.7;flex:none}
+.scene-inner.narrow .eyebrow::before,.scene-inner .eyebrow::before{opacity:.55}
+
+/* ---- 4 · spacing rhythm ------------------------------------------------
+   Several chapters had their own idea of a heading gap. The scale above
+   now governs every one of them. */
+.scene-inner .eyebrow{margin-bottom:var(--s4)}
+.scene-inner .display{margin-bottom:var(--s4)}
+.scene-inner .display-sub{margin-bottom:var(--s6)}
+.scene-inner .scene-lede{margin-bottom:var(--s6)}
+.scene-inner .scene-foot{margin-top:var(--s5)}
+.faq{margin-top:var(--s5)}
+.how-grid{margin:var(--s6) 0 var(--s7)}
+.how-item{padding:var(--s4) 0 var(--s5)}
+.how-item b{font-size:clamp(19px,1.8vw,23px);margin-bottom:var(--s2)}
+.how-item p{font-size:13.5px;line-height:1.9}
+.review blockquote{margin:var(--s3) 0 var(--s4)}
+.star-ledger{margin:var(--s6) auto var(--s5)}
+.age-panel{padding:var(--s5) clamp(6px,2vw,26px) var(--s5)}
+
+/* ---- 5 · the footer becomes a closing paragraph ------------------------
+   It was a sitemap. It should read like the last line of a book. */
+.site{padding:clamp(56px,9vh,84px) 7vw clamp(64px,10vh,104px);
+  background:linear-gradient(180deg,rgba(5,4,15,.2),rgba(5,4,15,.92) 46%,#04030c)}
+.site::before{content:"";position:absolute;left:50%;top:0;width:min(900px,86vw);height:1px;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,rgba(243,211,138,.34),transparent)}
+.foot-brand .wordmark{font-size:27px}
+.foot-brand p{font-size:clamp(18px,2vw,23px);color:rgba(247,240,226,.74);max-width:34ch}
+.foot-links{gap:12px clamp(16px,2.6vw,30px);margin-top:2px}
+.foot-links a,.foot-links button{font-size:9px;letter-spacing:.26em;color:rgba(247,240,226,.62)}
+.foot-links a,.foot-links button{position:relative}
+.foot-links a::after,.foot-links button::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:var(--gold);transform:scaleX(0);transform-origin:center;transition:transform .4s var(--ease)}
+.foot-links a:hover::after,.foot-links button:hover::after{transform:scaleX(1)}
+.foot-inner .foot-note{font-size:11.5px;line-height:1.9;color:rgba(247,240,226,.5);max-width:58ch}
+
+/* ---- 6 · mobile: real compositions, not centred stacks ---------------- */
+@media(max-width:760px){
+  .scene{padding:clamp(104px,14vh,136px) 20px clamp(88px,12vh,116px)}
+  .scene-inner .eyebrow{margin-bottom:var(--s3)}
+  .scene-inner .display{margin-bottom:var(--s3)}
+  .scene-inner .display-sub,.scene-inner .scene-lede{margin-bottom:var(--s5)}
+  .how-grid{margin:var(--s5) 0 var(--s6)}
+  .how-item{padding:var(--s3) 0 var(--s4)}
+  .review-track{mask-image:linear-gradient(90deg,transparent,#000 2%,#000 82%,transparent 99%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 2%,#000 82%,transparent 99%);padding-inline:4px}
+  .review{flex-basis:88vw;padding:20px 4px 18px}
+  .review blockquote{font-size:19px;line-height:1.62}
+  /* the micro-labels were the smallest thing on a phone; give them air */
+  .corner{font-size:8.5px;letter-spacing:.22em;opacity:.8}
+  .sound-feedback,.age-panel .ap-meta,.music-controls .btn-outline{font-size:9px;letter-spacing:.18em;gap:12px}
+  .age-panel .ap-meta{gap:14px 18px}
+  .foot-inner{gap:var(--s5)}
+  .foot-brand p{font-size:18px}
+  .site{padding-inline:22px}
+  .ledger-item{padding:20px 0 22px}
+  .ledger-item:last-child{text-align:left;padding-inline:0}
+  .ledger-item b{font-size:23px}
+  .ledger-item span{font-size:13px;line-height:1.75}
+}
+@media(max-width:430px){
+  .review{flex-basis:92vw}
+  .star-item{padding:18px 8px}
+  .star-item .n{font-size:30px}
+}
+
+/* ---- 7 · reduced motion + touch: keep the design, drop the theatre ---- */
+@media(max-width:760px){
+  .scene::after{opacity:.34}
+  body::after{opacity:.34;animation:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html:not(.force-motion) body::after{animation:none}
+}
+
+/* ---- 8 · the wizard reads like turning a page --------------------------
+   Steps used to appear with the same flat fade in both directions, and the
+   progress bar gave no verbal position. Now the motion has a direction and
+   the bar carries a real step counter. */
+.wiz-head{display:flex;align-items:center;gap:18px;margin-bottom:8px}
+.wiz-step-label{font-family:var(--ui);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.wiz-head .progress{flex:1;margin-bottom:0;align-items:center}
+.progress i{position:relative;height:2px;background:rgba(246,238,223,.09);overflow:hidden;border-radius:2px}
+.progress i.done{background:linear-gradient(90deg,rgba(243,211,138,.42),rgba(243,211,138,.66))}
+.progress i.active{background:rgba(243,211,138,.18)}
+.progress i.active::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(243,211,138,.95),transparent);
+  transform:translateX(-100%);animation:progressSheen 2.4s var(--ease-soft) infinite}
+@keyframes progressSheen{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+.step.active{animation:none}
+.step.from-right{animation:stepInRight .62s var(--ease) both}
+.step.from-left{animation:stepInLeft .62s var(--ease) both}
+@keyframes stepInRight{from{opacity:0;transform:translate3d(26px,0,0)}to{opacity:1;transform:none}}
+@keyframes stepInLeft{from{opacity:0;transform:translate3d(-26px,0,0)}to{opacity:1;transform:none}}
+.step h3:focus{outline:none}
+@media(prefers-reduced-motion:reduce){
+  html:not(.force-motion) .step.from-right,html:not(.force-motion) .step.from-left{animation:viewFade .3s ease both}
+  html:not(.force-motion) .progress i.active::after{animation:none;opacity:0}
+}
+
+/* field help + inline validation, in the same voice as the rest of the page */
+.field-hint{font-family:var(--script);font-style:italic;font-size:14.5px;line-height:1.6;color:var(--dim);margin:9px 0 0;transition:opacity .3s}
+.field-error{font-family:var(--ui);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#f0a58f;
+  margin:0;max-height:0;overflow:hidden;opacity:0;transition:max-height .35s var(--ease),opacity .3s,margin .3s}
+.field-error.show{max-height:40px;opacity:1;margin-top:10px}
+.input.is-invalid{border-color:rgba(240,165,143,.85);box-shadow:0 0 0 3px rgba(240,165,143,.12);animation:fieldShake .45s var(--ease-soft)}
+@keyframes fieldShake{0%,100%{transform:translateX(0)}22%{transform:translateX(-5px)}55%{transform:translateX(4px)}80%{transform:translateX(-2px)}}
+
+/* the "wizard nav" bar: one primary action, one quiet one, never two equal pills */
+.wiz-nav{align-items:center;gap:14px}
+#wizPrev{margin-right:auto;border:0;background:none;padding:12px 4px;letter-spacing:.22em;color:var(--muted)}
+#wizPrev:hover{color:var(--gold);background:none;box-shadow:none;border:0}
+#wizPrev::before{content:"←";margin-right:8px;opacity:.7}
+#wizNext{padding:14px 30px;border-color:rgba(243,211,138,.5);color:#fff4d8}
+#wizCreate{box-shadow:0 14px 44px rgba(243,211,138,.26),inset 0 1px 0 rgba(255,255,255,.45)}
+@media(max-width:760px){
+  .wiz-nav{position:sticky;bottom:0;display:flex;gap:10px;padding:14px 0 calc(16px + env(safe-area-inset-bottom,0px))}
+  #wizNext,#wizCreate{flex:1;justify-content:center;padding:15px 18px;font-size:9.5px;letter-spacing:.16em}
+  .wiz-step-label{font-size:8.5px;letter-spacing:.22em}
+}
+
+/* ---- 9 · reading rail -------------------------------------------------
+   A quiet bookmark down the left edge of the story: one hairline per
+   chapter that fills as the chapter is reached. */
+.read-rail{position:fixed;left:clamp(10px,2vw,26px);top:34%;bottom:34%;width:2px;display:none;flex-direction:column;gap:8px;z-index:25;pointer-events:none}
+body.reading-story .read-rail{display:flex}
+.read-rail i{flex:1;border-radius:2px;background:rgba(247,240,226,.1);transition:background .6s var(--ease)}
+.read-rail i.on{background:linear-gradient(180deg,var(--gold),rgba(243,211,138,.35));box-shadow:0 0 12px rgba(243,211,138,.4)}
+@media(max-width:1080px){.read-rail{display:none!important}}
+
+/* the story card and covers: hairline glyph, no emoji */
+.story-card .cover .em{width:44px;height:44px;display:grid;place-items:center;color:rgba(255,248,230,.94);opacity:.95;
+  border:1px solid rgba(255,248,230,.26);border-radius:50%;background:rgba(6,5,16,.34);backdrop-filter:blur(2px);transform:translateY(18px)}
+.story-card .cover .em svg{width:23px;height:23px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+.story-card .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,3,12,0) 30%,rgba(4,3,12,.55));pointer-events:none}
+.story-card .cover{height:148px}
+.story-card .cover .em{position:relative;z-index:2}
+.story-card{border-color:rgba(247,240,226,.08)}
+.story-card:hover{border-color:rgba(243,211,138,.6);box-shadow:0 24px 60px -20px rgba(0,0,0,.8),0 0 40px -18px rgba(243,211,138,.3)}
+.story-card:focus-visible{outline:1.5px solid var(--gold);outline-offset:3px}
+.story-card .body{padding:18px 20px}
+.story-card h4{text-wrap:balance}
+.story-card .foot{padding:0 20px 16px;border-top:1px solid rgba(247,240,226,.05);padding-top:12px}
+
+/* ---- 10 · the library's empty state and the wallet --------------------- */
+.empty{border:1px dashed rgba(243,211,138,.24);border-radius:2px;padding:clamp(44px,7vw,72px) 30px;background:radial-gradient(60% 80% at 50% 0%,rgba(243,211,138,.05),transparent 70%)}
+.empty .em{font-size:22px;color:var(--gold);opacity:.8}
+.empty h3{font-size:clamp(23px,3vw,30px);margin-bottom:10px}
+.empty p{max-width:44ch;margin-inline:auto}
+.wallet{border:1px solid rgba(247,240,226,.09);background:linear-gradient(180deg,rgba(26,21,56,.55),rgba(10,8,24,.35));box-shadow:0 30px 80px -40px rgba(0,0,0,.9)}
+.wallet .eyebrow{margin-bottom:14px}
+.wallet-n{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;line-height:1}
+.wallet-n .coin{font-size:20px;color:var(--gold);opacity:.9;transform:translateY(-6px)}
+.wallet-n span:first-child{font-size:clamp(50px,6vw,62px)}
+.wallet hr{border-top:1px solid rgba(247,240,226,.07)}
+.wallet .code:hover{border-color:rgba(243,211,138,.5)}
+
+/* ---- 11 · the menu modal, recomposed ---------------------------------
+   "Where to?" was nine identical outline pills. Now it is a small map:
+   two doors that matter, a hairline, then the switches as settings rows. */
+.modal{background:linear-gradient(165deg,#1b1539 0%,#0c0a1f 58%,#080617 100%);border-color:rgba(243,211,138,.2);
+  box-shadow:0 40px 120px -30px rgba(0,0,0,.9),0 0 0 1px rgba(247,240,226,.03) inset}
+.modal::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(70% 40% at 50% 0%,rgba(243,211,138,.07),transparent 70%)}
+.modal{position:relative;overflow:auto}
+.modal .close{transition:color .25s,transform .35s var(--ease);width:36px;height:36px;display:grid;place-items:center;margin:-6px -6px 0 0;border-radius:50%}
+.modal .close:hover{color:var(--gold);transform:rotate(90deg);background:rgba(243,211,138,.08)}
+.menu-sheet{display:grid;gap:10px;margin-top:22px}
+.menu-door{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:18px 20px;border:1px solid rgba(247,240,226,.1);
+  border-radius:2px;text-align:left;background:rgba(247,240,226,.02);transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.menu-door:hover{border-color:rgba(243,211,138,.55);background:rgba(243,211,138,.06);transform:translateY(-1px)}
+.menu-door b{font-family:var(--script);font-style:italic;font-weight:400;font-size:21px;color:var(--ink)}
+.menu-door span{font-family:var(--ui);font-size:8.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim)}
+.menu-door.primary{border-color:rgba(243,211,138,.45);background:linear-gradient(120deg,rgba(243,211,138,.14),rgba(243,211,138,.04))}
+.menu-door.primary b{color:#fff3d0}
+.menu-rule{height:1px;background:rgba(247,240,226,.08);margin:6px 0}
+.menu-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 2px;border:0;border-bottom:1px solid rgba(247,240,226,.05);
+  background:none;width:100%;text-align:left;font-family:var(--ui);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);transition:color .25s}
+.menu-row:hover{color:var(--gold)}
+.menu-row b{font-family:var(--script);font-style:italic;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink-2);font-weight:400}
+.menu-row:hover b{color:#fff4d8}
+
+/* ---- 12 · the language pills needed contrast at night ----------------- */
+.lang-pills .pill{background:rgba(247,240,226,.035);border-color:rgba(247,240,226,.2);color:rgba(247,240,226,.86)}
+.lang-pills .pill em{color:rgba(247,240,226,.6);font-size:15px}
+.lang-pills .pill.active em{color:var(--gold)}
+.choice small{color:rgba(148,145,178,.95)}
+
+/* ---- 13 · the hero's first five seconds ------------------------------
+   The scroll cue used to sit under the sound pill and read like a link.
+   It now breathes at the very bottom edge, on its own. */
+.scroll-cue{opacity:.85}
+.scroll-cue:hover{color:var(--gold)}
+.hero-preview .hp-kicker{color:rgba(247,240,226,.5)}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:430px){.menu-grid{grid-template-columns:1fr}}
+
+/* ---- 14 · FAQ: measured accordion, gold hairline that draws in --------- */
+.faq-item{position:relative}
+.faq-item::before{content:"";position:absolute;left:0;top:0;height:1px;width:0;background:linear-gradient(90deg,var(--gold),rgba(243,211,138,.1));
+  transition:width .55s var(--ease)}
+.faq-item:hover::before,.faq-item.open::before{width:100%}
+.faq-q{padding:22px 0;font-size:clamp(18px,1.5vw,20px);line-height:1.45;align-items:baseline}
+.faq-q .plus{font-size:16px;width:22px;text-align:center;opacity:.8;transition:transform .45s var(--ease),opacity .3s,color .3s}
+.faq-item.open .faq-q{color:#fff4d8}
+.faq-item.open .plus{opacity:1}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .46s var(--ease)}
+.faq-item.open .faq-a{padding-bottom:26px}
+.faq-a p{padding-right:52px;font-size:14px;line-height:1.92;color:rgba(166,163,196,.95);max-width:62ch}
+@media(max-width:760px){
+  .faq-q{padding:19px 0;font-size:17px}
+  .faq-a p{padding-right:8px;font-size:13.5px}
+  .faq-item.open .faq-a{padding-bottom:22px}
+}
+
+/* ---- 15 · the ages timeline: a real dial, not five dots on a line ------ */
+.age-timeline{padding:6px 0 2px}
+.age-timeline::before{background:linear-gradient(90deg,transparent,rgba(247,240,226,.14) 12%,rgba(247,240,226,.14) 88%,transparent)}
+.age-timeline .age-chip{padding:16px 4px 14px;gap:12px}
+.age-timeline .age-chip i{width:9px;height:9px;background:rgba(247,240,226,.16);border:1px solid rgba(247,240,226,.3);transition:.4s var(--ease)}
+.age-timeline .age-chip::after{content:"";position:absolute;left:50%;top:calc(50% - 30px);width:34px;height:34px;transform:translate(-50%,-50%) scale(.6);
+  border-radius:50%;background:radial-gradient(circle,rgba(243,211,138,.22),transparent 70%);opacity:0;transition:.5s var(--ease);pointer-events:none}
+.age-timeline .age-chip:hover::after,.age-timeline .age-chip.selected::after{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.age-timeline .age-chip.selected i{width:12px;height:12px}
+.age-panel{border-top:1px solid rgba(247,240,226,.12);border-bottom:0;position:relative}
+.age-panel::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(243,211,138,.28),transparent)}
+.age-panel .ap-age{font-size:clamp(38px,5.4vw,68px);letter-spacing:-.045em}
+.age-panel .ap-hint{letter-spacing:.34em;font-size:9px}
+
+/* ---- 16 · parents: the counter becomes a quiet inscription ------------ */
+.counter{position:relative;padding-bottom:clamp(14px,2vh,22px)}
+.counter::after{content:"";position:absolute;left:50%;bottom:-6px;width:1px;height:clamp(18px,3vh,30px);transform:translateX(-50%);
+  background:linear-gradient(180deg,rgba(243,211,138,.42),transparent);pointer-events:none}
+.counter span{font-size:clamp(62px,9.6vw,136px);letter-spacing:-.055em;}
+.counter span{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  background-image:linear-gradient(175deg,#fff6dc 4%,#f3d38a 52%,rgba(201,164,95,.85) 100%);
+  filter:drop-shadow(0 10px 40px rgba(243,211,138,.18))}
+.counter p{letter-spacing:.32em;font-size:9.5px;color:rgba(166,163,196,.9)}
+.review-nav{gap:14px;margin-top:18px}
+.review-nav .circle-btn{width:42px;height:42px;border-color:rgba(247,240,226,.16);font-size:14px}
+.review-nav .circle-btn:hover{background:rgba(243,211,138,.1);box-shadow:0 0 24px -6px rgba(243,211,138,.5)}
+
+/* ---- 17 · the dark-room reading focus --------------------------------
+   The old build dimmed every paragraph except the one in the exact centre
+   band to 35%, which on a phone meant a whole paragraph could vanish while
+   the eye was on the line just above. The active paragraph now lifts
+   instead of the others disappearing. */
+#reader .chapter .prose p{transition:color .5s var(--ease-soft),opacity .6s var(--ease-soft),text-shadow .6s}
+#reader .chapter .prose p.para-dim{opacity:.62;color:rgba(247,240,226,.8)}
+#reader .chapter .prose p.para-active{opacity:1;color:#fff8e8;text-shadow:0 0 34px rgba(243,211,138,.12)}
+
+/* ---- 18 · the reader's toolbar: grouped, and never wrapping oddly ----- */
+.reader-toolbar{gap:4px;padding:8px;border-color:rgba(247,240,226,.12);background:rgba(9,8,24,.86);
+  box-shadow:0 18px 50px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(247,240,226,.04)}
+.tool-btn{border:0;background:none;padding:9px 13px;letter-spacing:.14em;color:rgba(166,163,196,.95)}
+.tool-btn:hover{background:rgba(243,211,138,.08)}
+.tool-btn.active{background:rgba(243,211,138,.14);color:var(--gold)}
+.reader-toolbar .spacer{min-width:6px}
+.chapter-nav button{width:30px;height:30px;transition:.3s var(--ease)}
+.chapter-nav button:hover{border-color:rgba(243,211,138,.6);color:var(--gold);transform:translateY(-1px)}
+.chapter-nav button.active{box-shadow:0 0 22px -4px rgba(243,211,138,.6)}
+
+/* the chapter body: a page with a lit spine, not a box */
+.chapter{border-color:rgba(247,240,226,.07);background:linear-gradient(180deg,rgba(18,15,40,.55),rgba(11,9,26,.35));
+  box-shadow:0 30px 70px -50px rgba(0,0,0,.9)}
+.chapter::before{width:2px}
+.chapter .prose{letter-spacing:.002em}
+.chapter h3{margin-bottom:18px}
+
+/* ---- 19 · the story cover: the title is the hero ---------------------- */
+.story-cover{border-color:rgba(247,240,226,.1);box-shadow:0 40px 90px -60px rgba(0,0,0,.95)}
+.story-cover .cover-text{background:linear-gradient(180deg,rgba(6,5,16,.0),rgba(6,5,16,.35))}
+.story-cover .cover-text .meta{color:rgba(243,211,138,.9);letter-spacing:.26em}
+.story-cover h1{letter-spacing:-.035em;line-height:1.06;text-wrap:balance}
+.cover-meta .pill{border-color:rgba(247,240,226,.16);color:rgba(247,240,226,.86);background:rgba(247,240,226,.04)}
+.end-card{border-color:rgba(247,240,226,.1);background:linear-gradient(180deg,rgba(24,19,50,.55),rgba(10,8,24,.35))}
+.end-card h3{font-size:30px;color:#fff6dc}
+
+/* ---- 20 · install banner + cookie bar share the footer's language ----- */
+.cookie{border:1px solid rgba(247,240,226,.12);background:rgba(12,10,28,.94);box-shadow:0 24px 70px -30px rgba(0,0,0,.9)}
+.install-banner{border-color:rgba(247,240,226,.14)}
+
+/* ---- 21 · cheap sky in the app views ---------------------------------
+   In the wizard, the library and the reader the sky is a dim backdrop at
+   0.22–0.4 opacity. Halving the canvas cost there is invisible and gives a
+   phone back a frame budget for typing and scrolling. */
+body.sky-light #world{opacity:.18}
+body.sky-light #starfield{opacity:.32}
+
+/* ---- 22 · legibility of the fixed chrome ------------------------------
+   The corner labels sit on top of the chapter content on a short screen.
+   A soft scrim behind them (the topbar already had one) fixes the contrast
+   without adding another opaque bar. */
+#chrome::after{content:"";position:absolute;left:0;right:0;bottom:0;height:104px;pointer-events:none;z-index:-1;
+  background:linear-gradient(0deg,rgba(5,4,15,.94) 0%,rgba(5,4,15,.62) 42%,rgba(5,4,15,0) 100%)}
+body.app-view #chrome::after{display:none}
+
+/* ---- 23 · scroll progress on a phone ---------------------------------
+   The desktop rail is a real navigation; on a phone it is hidden, which left
+   no sense of place. One hairline at the very top edge, gold, fills as the
+   story is read. */
+.scroll-progress{position:fixed;left:0;top:0;height:2px;width:100%;z-index:60;pointer-events:none;background:transparent;opacity:0;transition:opacity .5s}
+.scroll-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,rgba(243,211,138,.25),var(--gold) 60%,#fff2cd);
+  box-shadow:0 0 12px rgba(243,211,138,.6);transition:width .12s linear}
+body.app-view .scroll-progress{opacity:0!important}
+@media(max-width:1080px){.scroll-progress{opacity:1}}
+@media(prefers-reduced-motion:reduce){.scroll-progress i{transition:none}}
+
+/* ---- 24 · the reader bar on a phone: one scrollable row --------------
+   It used to wrap into two rows and eat the top of the page. Now it is a
+   single row you can nudge sideways, with the same hairlines. */
+@media(max-width:760px){
+  .reader-toolbar{top:calc(62px + env(safe-area-inset-top,0px));flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+    justify-content:flex-start;gap:2px;padding:7px 10px;border-radius:999px;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+  .reader-toolbar::-webkit-scrollbar{display:none}
+  .tool-btn{flex:none;padding:9px 12px;font-size:8.5px;letter-spacing:.14em}
+  .reader-toolbar .spacer{display:none}
+  .chapter-nav{margin-bottom:22px}
+  .read-rail{display:none}
+}
+
+/* ---- 25 · the last screen of the page --------------------------------
+   On a phone the finale filled a whole screen and then the footer began,
+   leaving a band of nothing between the CTA and the colophon. The finale
+   now closes with the footer in view. */
+@media(max-width:760px){
+  .scene.end{min-height:72svh;padding-top:clamp(112px,16vh,150px);padding-bottom:clamp(28px,4vh,44px)}
+  .scene.end .display{margin-bottom:16px}
+  .site{padding-top:44px}
+  /* the fixed topbar needs a firmer scrim on a narrow screen, where copy
+     from the section behind it used to read through the wordmark */
+  .topbar::before{height:120px;
+    background:linear-gradient(180deg,rgba(5,4,15,.99) 0%,rgba(5,4,15,.96) 52%,rgba(5,4,15,.55) 82%,rgba(5,4,15,0) 100%)}
+}
+
+/* ---- 26 · the topbar scrim was neutralised ---------------------------
+   `isolation:isolate` on .topbar::before gave the pseudo its own stacking
+   context, so its z-index:-1 no longer painted behind the bar. The scrim
+   is now a normal element-level overlay on the header itself. */
+.topbar::before{isolation:auto}
+.topbar{isolation:isolate}
+.topbar::before{content:"";position:absolute;left:0;right:0;top:-26px;height:clamp(150px,22vh,196px);z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(5,4,15,.96) 0%,rgba(5,4,15,.82) 38%,rgba(5,4,15,.42) 68%,rgba(5,4,15,0) 100%)}
+@media(max-width:760px){
+  .topbar::before{top:-16px;height:112px;
+    background:linear-gradient(180deg,rgba(5,4,15,.985) 0%,rgba(5,4,15,.9) 62%,rgba(5,4,15,.35) 88%,rgba(5,4,15,0) 100%)}
+}
+
+/* ---- 27 · the last screen, precisely --------------------------------
+   On a phone the finale's headline landed behind the wordmark once the
+   footer scrolled up. The finale is now bottom-anchored inside its own box
+   and the footer is a little tighter, so both close the page without
+   anything reading through the chrome. */
+@media(max-width:760px){
+  .scene.end{align-content:end;padding-top:0;padding-bottom:clamp(18px,3vh,30px);min-height:76svh}
+  .site{padding-top:34px;padding-bottom:clamp(44px,7vh,64px)}
+  .foot-inner{gap:clamp(18px,2.6vh,26px)}
+  .foot-brand p{font-size:17.5px;line-height:1.62}
+  .foot-inner .foot-note{padding-top:18px;font-size:10.5px;line-height:1.85}
+  .foot-links{gap:10px 16px}
+}
 </style>
 </head>
 <body class="asleep">
 <!-- entrance veil: pure CSS so it always lifts, with or without JS -->
 <div class="veil" aria-hidden="true"><span class="veil-mark">stories<em>AI</em></span><span class="veil-star">✦</span></div>
 <a class="skip-link" href="#main">Skip to the story</a>
+<div class="scroll-progress" aria-hidden="true"><i id="scrollProgress"></i></div>
 <canvas id="world" aria-hidden="true"></canvas>
 <canvas id="starfield" aria-hidden="true"></canvas>
 <div class="grain" aria-hidden="true"></div>
@@ -1053,12 +1477,18 @@ body.app-view .veil{display:none}
     <div class="page-head"><p class="eyebrow">THE STORYTELLER'S DESK</p><h2 class="display">Let's make <span class="gold-script">tonight's tale</span></h2><p class="quiet">Six little choices. About thirty seconds. One story never told before.</p></div>
     <div class="wizard-shell">
       <div class="wizard">
-        <div class="progress" id="wizProgress"></div>
+        <div class="wiz-head"><span class="wiz-step-label" id="wizStepLabel">STEP 1 OF 5</span><div class="progress" id="wizProgress"></div></div>
         <div class="step active" data-step="0">
           <div class="roman">I · THE HERO</div>
           <h3 class="display-sm">What is <span class="gold-script">their name?</span></h3>
           <p class="quiet">More than one hero? Separate names with a comma or “and” — they will all be in the story.</p>
-          <div class="field"><label>NAME(S)</label><input class="input" id="namesInput" maxlength="160" placeholder="e.g. Riya and Kabir" autocomplete="off"></div>
+          <div class="field">
+            <label for="namesInput">NAME(S)</label>
+            <input class="input" id="namesInput" maxlength="160" placeholder="e.g. Riya and Kabir" autocomplete="off"
+                   aria-describedby="nameHelp nameError">
+            <p class="field-hint" id="nameHelp">One name, or two for siblings — they will all be in the story.</p>
+            <p class="field-error" id="nameError" role="alert" aria-live="assertive"></p>
+          </div>
           <div class="field"><label>WHAT SHALL WE WRITE?</label><div class="choice-grid" id="choiceType" style="grid-template-columns:repeat(2,1fr)"></div></div>
         </div>
         <div class="step" data-step="1">
@@ -1145,12 +1575,12 @@ body.app-view .veil{display:none}
       <aside>
         <div class="wallet">
           <p class="eyebrow">YOUR POUCH</p>
-          <div class="wallet-n"><span id="walletStars">3</span> ✦</div>
+          <div class="wallet-n"><span id="walletStars">3</span><span class="coin" aria-hidden="true">✦</span></div>
           <p class="quiet small">One Star weaves one story. Stars are a gift in this edition.</p>
           <button class="pill-gold" id="addStarsBtn">✦ ADD FREE STARS</button>
           <hr>
           <p class="quiet small">Invite a friend — share your code</p>
-          <div class="code"><span id="inviteCode">STORIESAI-…</span><button class="circle-btn" id="copyCode" title="Copy code">⧉</button></div>
+          <div class="code"><span id="inviteCode">STORIESAI-…</span><button class="circle-btn" id="copyCode" title="Copy invite code" aria-label="Copy invite code"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></svg></button></div>
           <hr>
           <button class="btn-outline" id="exportBtn" style="width:100%">↓ EXPORT MY STORIES</button>
           <button class="btn-outline" id="importBtn" style="width:100%;margin-top:8px">↑ IMPORT A BACKUP</button>
@@ -1841,6 +2271,14 @@ window.CAudio = (function () {
     (SFX_PLAYERS[key] || SFX_PLAYERS.twinkle)();
   }
 
+  /* Called from the first user gesture: opens (or resumes) the audio context
+     without making a sound, so the first PLAY or golden word is instant. */
+  function unlock() {
+    ensure();
+    try { if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume(); } catch (e) {}
+    return !!ctx;
+  }
+
   function setSound(on) {
     soundOn = !!on;
     if (soundOn) ensure();
@@ -1898,7 +2336,7 @@ window.CAudio = (function () {
   function isSpeaking() { return speaking; }
 
   return {
-    ensure: ensure, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
+    ensure: ensure, unlock: unlock, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
     playSfx: playSfx, setSound: setSound, isSoundOn: function () { return soundOn; },
     setMuted: setMuted, isMuted: isMuted,
     getDiagnostics: getDiagnostics,
@@ -2499,6 +2937,7 @@ window.CStars = (function () {
     return q;
   }
   function frame(ts) {
+    if (forcePaused) { raf = null; return; }
     raf = requestAnimationFrame(frame);
     try { draw(ts); } catch (e) { /* one bad frame must not stop the sky */ }
   }
@@ -2569,8 +3008,16 @@ window.CStars = (function () {
     });
     last = performance.now(); raf = requestAnimationFrame(frame);
   }
+  var forcePaused = false;
   return {
     init: init,
+    /* same contract as the WebGL sky: a hidden tab, an open dialog or the reader
+       should not keep repainting a starfield nobody is looking at */
+    setPaused: function (v) {
+      forcePaused = !!v;
+      if (forcePaused) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (!raf && P.length) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    },
     setMode: function (m) { mode = parseInt(m, 10) || 0; },
     setAwake: function (a) { awake = !!a; },
     /* the same place profile that drives the WebGL world drives the 2D sky */
@@ -3663,6 +4110,24 @@ window.CWorld = (function () {
     },
     count: function () { return S.length; },
     stop: function (why) { handOver(why || 'stopped'); },
+    dispose: function () {
+      try {
+        dead = true; paused = true;
+        if (raf) { cancelAnimationFrame(raf); raf = null; }
+        var ext = gl && gl.getExtension && gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+      } catch (e) {}
+    },
+    /* A modal, the reader or a hidden tab are moments when nobody is looking at
+       the sky. Freezing the render loop there is free battery — 95k points at
+       60 fps is otherwise pure waste behind a blurred dialog. */
+    setPaused: function (v) {
+      var want = !!v;
+      if (want === paused) return;
+      paused = want || document.hidden;
+      if (paused) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (!dead) { t0 = performance.now() - time * 1000; render(); }
+    },
     turn: function () { return Math.max(0, Math.min(1, prog / 0.055)); },
     /* re-dress the sky for a story setting: {sky:[top,bottom], accent, scene}.
        The environment profile in data.js owns the horizon geometry and the
@@ -3855,8 +4320,18 @@ window.CCursor = (function () {
   /* ---------------- utilities ---------------- */
   var toastTimer;
   function toast(msg) {
-    var t = $('#toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+    var t = $('#toast'); if (!t) return;
+    /* re-announce even when the text is identical: clear first, then set, so a
+       screen reader reads the second tap as well as the first */
+    t.classList.remove('show');
+    t.textContent = msg;
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+    t.setAttribute('aria-atomic', 'true');
+    /* force a frame so the transition restarts on rapid repeats */
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
   }
   function label(group, id) {
     var list = { age: D.AGES, value: D.VALUES, setting: D.SETTINGS, length: D.LENGTHS, mood: D.MOODS, language: D.LANGUAGES }[group] || [];
@@ -3866,13 +4341,48 @@ window.CCursor = (function () {
   function findSetting(id) { return D.SETTINGS.filter(function (s) { return s.id === id; })[0] || D.SETTINGS[0]; }
   function findMood(id) { return D.MOODS.filter(function (m) { return m.id === id; })[0] || D.MOODS[0]; }
   function prettyDate(iso) { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
+  var modalReturn = null;
   function modal(html, onMount) {
     var root = $('#modalRoot');
-    root.innerHTML = '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true"><button class="close" aria-label="Close">×</button>' + html + '</div></div>';
-    var close = function () { root.innerHTML = ''; };
+    modalReturn = document.activeElement;
+    root.innerHTML = '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="close" aria-label="Close">×</button>' + html + '</div></div>';
+    var panel = $('.modal', root);
+    /* the first heading is the dialog's name, so screen readers announce it */
+    var h = panel.querySelector('h3');
+    if (h) { h.id = 'modalTitle'; } else { panel.removeAttribute('aria-labelledby'); }
+    var closed = false;
+    if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(true);
+    if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(true);
+    function close() {
+      if (closed) return; closed = true;
+      root.innerHTML = '';
+      if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(false);
+      if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(false);
+      document.removeEventListener('keydown', onKey, true);
+      /* send focus back where it came from — never to the top of the document */
+      if (modalReturn && modalReturn.focus) { try { modalReturn.focus({ preventScroll: true }); } catch (e) {} }
+      modalReturn = null;
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      var items = panel.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
     $('.modal-back', root).addEventListener('click', function (e) { if (e.target === this) close(); });
     $('.close', root).addEventListener('click', close);
-    if (onMount) onMount($('.modal', root), close);
+    document.addEventListener('keydown', onKey, true);
+    if (onMount) onMount(panel, close);
+    /* focus the first real control, but never the close button alone */
+    setTimeout(function () {
+      var target = panel.querySelector('[data-autofocus]') ||
+        panel.querySelector('.pill-gold, .menu-door, input, select, textarea, a[href]:not(.close)') ||
+        panel.querySelector('.close');
+      if (target && target.focus) { try { target.focus({ preventScroll: true }); } catch (e) {} }
+    }, 40);
     return close;
   }
   function confirmModal(title, body, onYes) {
@@ -3903,6 +4413,11 @@ window.CCursor = (function () {
     paw: 'M8 14.5c-2 1.4-3 3-2.2 4.4.9 1.5 3.2 1.2 6.2 1.2s5.3.3 6.2-1.2c.8-1.4-.2-3-2.2-4.4|M7 9.5a1.8 1.8 0 1 0 0-.1|M17 9.5a1.8 1.8 0 1 0 0-.1|M12 6a1.8 1.8 0 1 0 0-.1',
     spare: 'M12 3.2 13.6 8.4 18.8 10l-5.2 1.6L12 16.8 10.4 11.6 5.2 10l5.2-1.6L12 3.2Z'
   };
+  /* A setting's `scene` maps to one of the line icons above. Emoji were the one
+     place the design broke its own language (and they render differently on
+     every OS), so covers now draw the same hairline glyph as the wizard. */
+  var SCENE_ICON = { forest: 'forest', castle: 'castle', island: 'island', space: 'planet', city: 'city', mountain: 'mountain', sea: 'sea', farm: 'mountain' };
+  function sceneGlyph(setting) { return ICONS[SCENE_ICON[setting.scene]] ? SCENE_ICON[setting.scene] : 'star'; }
   function iconGlyph(k) {
     var d = ICONS[k] || ICONS.spare;
     return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">' +
@@ -4016,6 +4531,8 @@ window.CCursor = (function () {
       if (railChapter) railChapter.style.top = (pct * 100) + '%';
       if (cue) { var co = sy > 120 ? '0' : '1'; if (cue.style.opacity !== co) { cue.style.opacity = co; cue.style.pointerEvents = co === '0' ? 'none' : 'auto'; } }
       if (window.CWorld && window.CWorld.setProgress) window.CWorld.setProgress(pct);
+      var sp = $('#scrollProgress');
+      if (sp) sp.style.width = (pct * 100).toFixed(2) + '%';
     }
 
     function tick() {
@@ -4328,7 +4845,7 @@ window.CCursor = (function () {
       soundTap(b);
       var sfx = D.SFX[b.dataset.sfx];
       var fb = $('#soundFeedback');
-      if (fb && sfx) { fb.textContent = sfx.emoji + '  ' + sfx.label + ' · the music dipped to make room'; fb.classList.add('active'); }
+      if (fb && sfx) { fb.textContent = '✦  ' + sfx.label + ' · the music dipped to make room'; fb.classList.add('active'); }
     });
 
     /* ---- V · voice guidance: a spectrum with a real sample passage ---- */
@@ -4366,8 +4883,11 @@ window.CCursor = (function () {
       return '<div class="review"><div class="stars" aria-label="' + r.stars + ' out of 5">' + '★'.repeat(r.stars) + '</div><blockquote>“' + esc(r.text) + '”</blockquote><div class="who">' + esc(r.name) + '<span>' + esc(r.note) + '</span></div></div>';
     }).join('');
 
-    $('#faqList').innerHTML = D.FAQ.map(function (f) {
-      return '<div class="faq-item"><button class="faq-q" aria-expanded="false">' + esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button><div class="faq-a"><p>' + esc(f.a) + '</p></div></div>';
+    $('#faqList').innerHTML = D.FAQ.map(function (f, i) {
+      var id = 'faq-a-' + i;
+      return '<div class="faq-item"><button class="faq-q" id="faq-q-' + i + '" aria-expanded="false" aria-controls="' + id + '">' +
+        esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button>' +
+        '<div class="faq-a" id="' + id + '" role="region" aria-labelledby="faq-q-' + i + '" hidden><p>' + esc(f.a) + '</p></div></div>';
     }).join('');
 
     /* the landing no longer sells pouches; the free top-up stays available as a
@@ -4377,8 +4897,23 @@ window.CCursor = (function () {
     $('#faqList').addEventListener('click', function (e) {
       var q = e.target.closest('.faq-q'); if (!q) return;
       var item = q.parentNode;
-      var open = item.classList.toggle('open');
+      var ans = item.querySelector('.faq-a');
+      var open = !item.classList.contains('open');
+      item.classList.toggle('open', open);
       q.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (ans) {
+        /* measured, not guessed: the old 360px cap clipped long answers */
+        if (open) {
+          ans.hidden = false;
+          var target = ans.scrollHeight;
+          ans.style.maxHeight = '0px';
+          requestAnimationFrame(function () { ans.style.maxHeight = target + 'px'; });
+        } else {
+          ans.style.maxHeight = Math.max(0, ans.scrollHeight) + 'px';
+          requestAnimationFrame(function () { ans.style.maxHeight = '0px'; });
+          setTimeout(function () { if (!item.classList.contains('open')) ans.hidden = true; }, 460);
+        }
+      }
     });
     $('#revPrev').onclick = function () { $('#reviewTrack').scrollBy({ left: -460, behavior: 'smooth' }); };
     $('#revNext').onclick = function () { $('#reviewTrack').scrollBy({ left: 460, behavior: 'smooth' }); };
@@ -4393,6 +4928,21 @@ window.CCursor = (function () {
 
   /* ---- the music chapter: one shared little player ---- */
   var homeAudible = false, homeMoodId = 'gentle';
+  /* The browers only let audio start inside a real gesture. The old build only
+     counted a tap on the music controls, so tapping a golden word in the hero
+     left the score silent until the visitor found PLAY. Any first gesture now
+     opens the audio context silently (no sound until asked for). */
+  var audioUnlocked = false;
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try { if (A.unlock) A.unlock(); else if (A.setSound) A.setSound(true); } catch (e) {}
+    window.removeEventListener('pointerdown', unlockAudio, true);
+    window.removeEventListener('keydown', unlockAudio, true);
+  }
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+
   function homeMood(id) {
     homeMoodId = id;
     var m = findMood(id);
@@ -4498,7 +5048,7 @@ window.CCursor = (function () {
     }, REST_MS);
 
     var sfx = D.SFX[btn.dataset.sfx];
-    if (sfx) toast(sfx.emoji + ' ' + sfx.label);
+    if (sfx) toast('✦ ' + sfx.label);
   }
 
   /* ---------------- wizard ---------------- */
@@ -4579,7 +5129,7 @@ window.CCursor = (function () {
     if (vNote) vNote.textContent = w.villain
       ? 'A little mischief-maker who always makes amends before the last page.'
       : 'Only adventure and wonder — nobody to be afraid of.';
-    renderStep(); renderSummary(); syncStars();
+    renderStep(0); renderSummary(); syncStars();
   }
   function renderSummary() {
     var w = S.wizard;
@@ -4592,12 +5142,52 @@ window.CCursor = (function () {
     if (w.type === 'series') rows.splice(2, 0, ['Chapter', String(w.chapterNumber || 1)]);
     $('#summaryList').innerHTML = rows.map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd></div>'; }).join('');
   }
-  function renderStep() {
-    $$('.step').forEach(function (s, i) { s.classList.toggle('active', i === wizardStep); });
-    $('#wizProgress').innerHTML = [0, 1, 2, 3, 4].map(function (i) { return '<i class="' + (i < wizardStep ? 'done' : i === wizardStep ? 'active' : '') + '"></i>'; }).join('');
+  var STEP_NAMES = ['The hero', 'Age & length', 'The value', 'The place', 'Mood'];
+  function renderStep(dir) {
+    $$('.step').forEach(function (s, i) {
+      var on = i === wizardStep;
+      s.classList.toggle('active', on);
+      s.classList.remove('from-left', 'from-right');
+      if (on && dir) s.classList.add(dir > 0 ? 'from-right' : 'from-left');
+    });
+    var p = $('#wizProgress');
+    if (p) {
+      p.innerHTML = STEP_NAMES.map(function (n, i) {
+        var st = i < wizardStep ? 'done' : i === wizardStep ? 'active' : '';
+        return '<i class="' + st + '"><span class="sr-only">' + n + (i === wizardStep ? ' — current step' : '') + '</span></i>';
+      }).join('');
+      p.setAttribute('role', 'progressbar');
+      p.setAttribute('aria-valuemin', '1');
+      p.setAttribute('aria-valuemax', String(STEP_NAMES.length));
+      p.setAttribute('aria-valuenow', String(wizardStep + 1));
+      p.setAttribute('aria-label', 'Step ' + (wizardStep + 1) + ' of ' + STEP_NAMES.length + ' · ' + STEP_NAMES[wizardStep]);
+    }
+    var counter = $('#wizStepLabel');
+    if (counter) counter.textContent = 'STEP ' + (wizardStep + 1) + ' OF ' + STEP_NAMES.length;
     $('#wizPrev').style.visibility = wizardStep === 0 ? 'hidden' : 'visible';
     $('#wizNext').style.display = wizardStep === 4 ? 'none' : 'inline-flex';
     $('#wizCreate').style.display = wizardStep === 4 ? 'inline-flex' : 'none';
+    /* every step's own heading takes focus so the screen reader follows the flow */
+    var activeStep = $('.step.active');
+    if (activeStep && dir) {
+      var h = activeStep.querySelector('h3');
+      if (h) { h.setAttribute('tabindex', '-1'); try { h.focus({ preventScroll: true }); } catch (e) {} }
+    }
+  }
+  /* inline, non-modal validation: the field itself says what is wrong */
+  function flagName(problem) {
+    var input = $('#namesInput'); if (!input) return;
+    input.classList.add('is-invalid');
+    input.setAttribute('aria-invalid', 'true');
+    var msg = $('#nameError');
+    if (msg) { msg.textContent = problem; msg.classList.add('show'); }
+    input.focus();
+    setTimeout(function () { input.classList.remove('is-invalid'); }, 700);
+  }
+  function clearNameFlag() {
+    var input = $('#namesInput'); if (!input) return;
+    input.classList.remove('is-invalid'); input.removeAttribute('aria-invalid');
+    var msg = $('#nameError'); if (msg) { msg.textContent = ''; msg.classList.remove('show'); }
   }
   function initWizard() {
     ['choiceType', 'choiceAge', 'choiceLength', 'choiceValue', 'choiceSetting', 'wizMoods', 'choiceLang'].forEach(function (id) {
@@ -4624,7 +5214,7 @@ window.CCursor = (function () {
         save(); renderWizard();
       });
     });
-    $('#namesInput').addEventListener('input', function () { S.wizard.names = this.value; save(); renderSummary(); });
+    $('#namesInput').addEventListener('input', function () { S.wizard.names = this.value; save(); renderSummary(); if (this.value.trim()) clearNameFlag(); });
     $('#extrasInput').addEventListener('input', function () { S.wizard.extras = this.value; save(); });
     $('#villainToggle').addEventListener('change', function () { S.wizard.villain = this.checked; save(); renderSummary(); });
     /* the custom fields are re-rendered with the chips, so the listener is delegated */
@@ -4654,10 +5244,12 @@ window.CCursor = (function () {
       haptic(null);
       renderSummary();
     });
-    $('#wizPrev').onclick = function () { if (wizardStep > 0) { wizardStep--; renderStep(); } };
+    $('#wizPrev').onclick = function () { if (wizardStep > 0) { wizardStep--; renderStep(-1); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
     $('#wizNext').onclick = function () {
-      if (wizardStep === 0 && !S.wizard.names.trim()) { toast('First, give the hero a name ✦'); $('#namesInput').focus(); return; }
-      if (wizardStep < 4) { wizardStep++; renderStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      if (wizardStep === 0 && !S.wizard.names.trim()) { flagName('Give the hero a name to begin'); return; }
+      if (wizardStep === 0 && !E.isValidNames(S.wizard.names)) { flagName(MAX_NAME_LENGTH + ' characters or fewer, please'); return; }
+      clearNameFlag();
+      if (wizardStep < 4) { wizardStep++; renderStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     };
     $('#wizCreate').onclick = function () { createStory(); };
     renderWizard();
@@ -4822,7 +5414,8 @@ window.CCursor = (function () {
       '<button class="tool-btn" id="printStory">⎙ Print</button>' +
       '<button class="tool-btn" id="deleteStory" title="Remove this story">Remove</button>' +
       '</div>' +
-      '<div class="chapter-nav">' + story.chapters.map(function (c, i) { return '<button data-chap="' + i + '" title="' + esc(c.title) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' +
+      '<div class="chapter-nav">' + story.chapters.map(function (c, i) { return '<button data-chap="' + i + '" title="' + esc(c.title) + '" aria-label="Chapter ' + (i + 1) + ': ' + esc(c.title) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' +
+      '<div class="read-rail" id="readProgress" aria-hidden="true">' + story.chapters.map(function () { return '<i></i>'; }).join('') + '</div>' +
       chaptersHTML +
       '<div class="end-card"><p class="eyebrow">Before the light goes off</p><h3>Let’s talk about it</h3><ol>' +
       story.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ol>' +
@@ -4845,7 +5438,12 @@ window.CCursor = (function () {
       if (nav) {
         $$('.chapter-nav button').forEach(function (b) { b.classList.remove('active'); });
         nav.classList.add('active');
-        $('#chap-' + nav.dataset.chap).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var target = $('#chap-' + nav.dataset.chap);
+        if (target) {
+          var bar = $('.reader-toolbar');
+          var offset = (bar ? bar.offsetHeight : 0) + 96;
+          window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+        }
         return;
       }
       if (e.target.closest('#musicToggle')) {
@@ -4876,6 +5474,28 @@ window.CCursor = (function () {
     };
     $$('.chapter-nav button')[0] && $$('.chapter-nav button')[0].classList.add('active');
     $('#musicToggle').classList.toggle('active', A.isMusicOn());
+    watchChapters();
+  }
+
+  /* The chapter dots used to highlight only when clicked. As the parent simply
+     reads downwards they should follow along, and the tiny page rail on the
+     left should fill like a bookmark. One IntersectionObserver, no scroll loop. */
+  var chapterObserver = null;
+  function watchChapters() {
+    if (chapterObserver) { chapterObserver.disconnect(); chapterObserver = null; }
+    var arts = $$('.chapter'); if (!arts.length || typeof IntersectionObserver === 'undefined') return;
+    chapterObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var idx = arts.indexOf(en.target);
+        $$('.chapter-nav button').forEach(function (b, i) { b.classList.toggle('active', i === idx); });
+        $$('#readProgress i').forEach(function (seg, i) { seg.classList.toggle('on', i <= idx); });
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    arts.forEach(function (a) { chapterObserver.observe(a); });
+    /* the rail length matches the number of chapters */
+    var rail = $('#readProgress');
+    if (rail) rail.style.setProperty('--chapters', String(arts.length));
   }
 
   /* ---------------- dark-room reading: focus, wake lock, night mode ----------------
@@ -5013,7 +5633,7 @@ window.CCursor = (function () {
       $('#libraryGrid').innerHTML = list.map(function (s) {
         var st = findSetting(s.cfg.setting), md = findMood(s.cfg.mood);
         return '<div class="story-card" data-open="' + esc(s.id) + '" role="button" tabindex="0">' +
-          '<div class="cover" style="--c1:' + st.sky[0] + ';--c2:' + st.sky[1] + '">' + scenery(st, md, true) + '<span class="em">' + st.emoji + '</span></div>' +
+          '<div class="cover" style="--c1:' + st.sky[0] + ';--c2:' + st.sky[1] + '">' + scenery(st, md, true) + '<span class="em" aria-hidden="true">' + iconGlyph(sceneGlyph(st)) + '</span></div>' +
           '<div class="body"><h4>' + esc(s.title) + '</h4><div class="meta">' + esc(String(s.cfg.customValue || '').trim() || label('value', s.cfg.value)) + ' · ' + esc(label('age', s.cfg.age)) + '<br>' + esc(prettyDate(s.createdAt)) + (s.cfg.type === 'series' ? ' · Chapter ' + esc(s.chapterNumber || 1) : '') + '</div></div>' +
           '<div class="foot"><span>' + esc((D.LANGUAGES.filter(function (l) { return l.id === s.cfg.language; })[0] || D.LANGUAGES[0]).label) + ' · ' + (s.source === 'ai' ? 'AI' : 'offline') + '</span><button data-del="' + esc(s.id) + '">Remove</button></div></div>';
       }).join('');
@@ -5074,6 +5694,12 @@ window.CCursor = (function () {
           save(); renderLibrary(); toast('Imported ' + added + ' story' + (added === 1 ? '' : 'ies'));
         } catch (err) { toast('That file is not a storiesAI backup'); }
       };
+      var importBtn = $('#importBtn');
+      if (importBtn) { importBtn.textContent = '↑ READING BACKUP…'; importBtn.disabled = true; }
+      var done = function () { if (importBtn) { importBtn.textContent = '↑ IMPORT A BACKUP'; importBtn.disabled = false; } };
+      reader.onerror = function () { done(); toast('That file could not be read'); };
+      var prevOnload = reader.onload;
+      reader.onload = function (e) { prevOnload.call(reader, e); done(); };
       reader.readAsText(file); this.value = '';
     };
   }
@@ -5213,14 +5839,27 @@ window.CCursor = (function () {
     $('#installFooter').onclick = installModal;
     $('#installBtn').onclick = function () { if (deferredInstall) { deferredInstall.prompt(); } else { installModal(); } };
     $('#menuBtn').onclick = function () {
-      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="11">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
+      modal('<h3>Where to?</h3><p class="small muted" style="margin:0">Three doors, and a few switches for the night.</p>' +
+        '<div class="menu-sheet">' +
+        '<a class="menu-door primary" data-autofocus href="#/create" data-close><b>✦ Create a story</b><span>Tonight\'s tale · one Star</span></a>' +
+        '<div class="menu-grid">' +
+        '<a class="menu-door" href="#/library" data-close><b>My library</b><span>Everything kept</span></a>' +
+        '<a class="menu-door" href="#/home" data-close data-scene="10"><b>How it works</b><span>Six little moves</span></a>' +
+        '</div>' +
+        '<button class="menu-row" data-daynight>Awake / asleep <b>Change the light</b></button>' +
+        '<button class="menu-row" data-motion>Motion <b>Follow the phone</b></button>' +
+        '<button class="menu-row" data-sky>Sky <b>Flying world</b></button>' +
+        '<a class="menu-row" href="#/home" data-close data-scene="11">Questions<b>FAQ</b></a>' +
+        '<a class="menu-row" href="#/home" data-close>Back to the night sky<b>↑</b></a>' +
+        '</div>',
         function (m, close) {
           $$('[data-close]', m).forEach(function (a) { a.onclick = function () { close(); }; });
           /* the AWAKE / ASLEEP rail is a phone-friendly line only, so the night
              mode toggle lives here too */
           var sk = $('[data-sky]', m);
           if (sk) {
-            sk.textContent = S.settings.sky === 'stars' ? 'Sky: 2D stars' : 'Sky: flying world';
+            var skVal = sk.querySelector('b') || sk;
+            skVal.textContent = S.settings.sky === 'stars' ? '2D stars' : 'Flying world';
             sk.onclick = function () {
               var toStars = S.settings.sky !== 'stars';
               S.settings.sky = toStars ? 'stars' : 'auto';
@@ -5238,7 +5877,7 @@ window.CCursor = (function () {
           }
           var mt = $('[data-motion]', m);
           if (mt) {
-            var paintMotion = function () { mt.textContent = motionForced() ? 'Motion: full ✦' : 'Motion: follow phone'; };
+            var paintMotion = function () { var v = mt.querySelector('b') || mt; v.textContent = motionForced() ? 'Full ✦' : 'Follow the phone'; };
             paintMotion();
             mt.onclick = function () {
               setMotion(!motionForced());
@@ -5330,6 +5969,14 @@ window.CCursor = (function () {
       $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
       if (window.__sceneUpdate) setTimeout(window.__sceneUpdate, 60);
     }
+    document.body.classList.toggle('reading-story', name === 'story');
+    var lightSky = name === 'create' || name === 'story' || name === 'library';
+    if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(false);
+    if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(false);
+    if (window.__skyLight !== lightSky) {
+      window.__skyLight = lightSky;
+      document.body.classList.toggle('sky-light', lightSky);
+    }
     if (name === 'library') renderLibrary();
     if (name === 'create') { renderWizard(); previewSetting(S.wizard.setting); }
     if (name === 'story' && currentStory) renderStory(currentStory);
@@ -5348,7 +5995,10 @@ window.CCursor = (function () {
     } else {
       showView(view);
     }
-    window.scrollTo(0, 0);
+    /* instant, not the global smooth behaviour: switching views must not fly
+       through every chapter of the landing page on the way up */
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
+    catch (e) { window.scrollTo(0, 0); }
   }
   function initRouting() {
     window.addEventListener('hashchange', route);
@@ -5489,6 +6139,19 @@ window.CCursor = (function () {
     /* building 20k+ particles is real work on a slow phone: let the hero paint
        first, then raise the sky one frame later */
     setTimeout(startSky, 90);
+    /* a phone that satchels the app for an hour should not keep a WebGL
+       context alive; free it, and rebuild the sky when it is shown again */
+    var hiddenAt = 0;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 120000 && window.CWorld && window.CWorld.dispose && document.body.classList.contains('has-world')) {
+        try { window.CWorld.dispose(); } catch (e) {}
+        document.body.classList.remove('has-world');
+        hiddenAt = 0;
+        setTimeout(startSky, 60);
+      }
+      hiddenAt = 0;
+    });
     /* the sky rises, the book gathers, then the words arrive */
     setTimeout(function () {
       var h = $('.scene.hero');
