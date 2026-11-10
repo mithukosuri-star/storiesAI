@@ -21,6 +21,7 @@
 <body class="asleep">
 <!-- entrance veil: pure CSS so it always lifts, with or without JS -->
 <div class="veil" aria-hidden="true"><span class="veil-mark">stories<em>AI</em></span><span class="veil-star">✦</span></div>
+<a class="skip-link" href="#main">Skip to the story</a>
 <canvas id="world" aria-hidden="true"></canvas>
 <canvas id="starfield" aria-hidden="true"></canvas>
 <div class="grain" aria-hidden="true"></div>
@@ -49,10 +50,11 @@
       <li><a href="#" data-scene="5">IV&nbsp;&nbsp; The sounds</a></li>
       <li><a href="#" data-scene="6">V&nbsp;&nbsp;&nbsp; The voice</a></li>
       <li><a href="#" data-scene="7">VI&nbsp;&nbsp; The ages</a></li>
-      <li><a href="#" data-scene="9">VII&nbsp; Parents</a></li>
-      <li><a href="#" data-scene="11">VIII Stars</a></li>
-      <li><a href="#" data-scene="12">IX&nbsp;&nbsp; How it works</a></li>
-      <li><a href="#" data-scene="14">X&nbsp;&nbsp;&nbsp; The end</a></li>
+      <li><a href="#" data-scene="8">VII&nbsp; Parents</a></li>
+      <li><a href="#" data-scene="9">VIII Stars</a></li>
+      <li><a href="#" data-scene="10">IX&nbsp;&nbsp; How it works</a></li>
+      <li><a href="#" data-scene="11">X&nbsp;&nbsp; Questions</a></li>
+      <li><a href="#" data-scene="12">XI&nbsp; The end</a></li>
     </ul>
   </div>
 
@@ -61,7 +63,7 @@
   <button class="corner sound-fixed" id="soundBtn" aria-pressed="false"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="soundLabel">SOUND</span></button>
 </div>
 
-<main>
+<main id="main" tabindex="-1">
 <!-- ======================= HOME / THE JOURNEY ======================= -->
 <section class="view active" id="view-home">
   <div class="scenes" id="scenes">
@@ -80,11 +82,8 @@
         <button class="pill-outline listen" id="heroSound" aria-pressed="false"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="heroSoundLabel">LISTEN WITH SOUND</span></button>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- II · the journey -->
     <section class="scene" data-chapter="II · THE JOURNEY" data-accent="#e9d9b6" data-name="The journey" data-mode="1" data-tint>
-      <span class="scene-num" aria-hidden="true">02</span>
       <div class="scene-inner">
         <p class="eyebrow">YOU ARE HERE &nbsp;·&nbsp; THE WISH</p>
         <h2 class="display">Personalized bedtime<br><em>stories for children</em></h2>
@@ -94,7 +93,6 @@
     </section>
 
     <section class="scene" data-chapter="II · THE JOURNEY" data-accent="#e9d9b6" data-name="The journey" data-mode="2">
-      <span class="scene-num" aria-hidden="true">02</span>
       <div class="scene-inner wide">
         <h2 class="spread-head" data-reveal="widow">A STORY MADE TO MEASURE</h2>
         <p class="display-sub" data-reveal="fade" style="--i:1">name, age, value, place and <span class="gold-script">a little villain</span></p>
@@ -108,18 +106,13 @@
         <p class="statement-sub" data-reveal="fade" style="--i:1">If you like, one who turns good in the end.</p>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- III · the music -->
     <section class="scene pin-scene" data-chapter="III · THE MUSIC" data-accent="#c7a9ff" data-name="The music" data-mode="4" data-tint>
       <div class="pin-sticky">
-      <span class="scene-num" aria-hidden="true">03</span>
       <div class="pin-wrap">
         <div class="pin-copy">
-          <p class="eyebrow" data-reveal="fade">EVERY STORY HAS ITS OWN AIR</p>
-          <h2 class="spread-head" data-reveal="widow">EVERY STORY HAS <span class="gold-script">its own music</span></h2>
-          <p class="lede" data-reveal="fade" style="--i:1">Four moods, four atmospheres. Tap one and the night changes colour above you — every note is synthesised live on your device, so nothing has to download and nothing ever plays before you ask.</p>
-          <p class="quiet" data-reveal="fade" style="--i:2">The music follows the mood you choose, ducks politely under a sound word, and fades to silence when the story ends.</p>
+          <h2 class="display" data-reveal="widow">Every story has <span class="gold-script">its own music</span></h2>
+          <p class="lede" data-reveal="fade" style="--i:1">Four moods. Tap one and the night changes colour above you — synthesised live on your device, and never before you ask.</p>
         </div>
         <div class="music-stage" id="musicStage" data-reveal="right">
           <div class="music-orb" id="musicOrb" aria-hidden="true"><span class="glyph">✦</span></div>
@@ -136,24 +129,18 @@
       </div>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- IV · the sounds -->
     <section class="scene" data-chapter="IV · THE SOUNDS" data-accent="#9fd8a6" data-name="The sounds" data-mode="5" data-tint>
-      <span class="scene-num" aria-hidden="true">04</span>
       <div class="scene-inner wide">
         <p class="eyebrow" data-reveal="fade">INTERACTIVE SOUND WORDS</p>
         <h2 class="display" data-reveal="widow">Words that<br><span class="gold-script">come to life</span></h2>
-        <span class="pill-outline static" data-reveal="fade" style="--i:1">TAP THE GOLDEN WORDS AND LISTEN</span>
+        <p class="scene-lede" data-reveal="fade" style="--i:1">Tap the golden words and listen</p>
         <div class="sound-demo" id="soundDemo" data-reveal="fade" style="--i:2"></div>
         <p class="sound-feedback" id="soundFeedback" role="status" aria-live="polite">Twelve sounds, made live · the music dips under each one</p>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- V · the voice -->
     <section class="scene" data-chapter="V · THE VOICE" data-accent="#8ec7f0" data-name="The voice" data-mode="6" data-tint>
-      <span class="scene-num" aria-hidden="true">05</span>
       <div class="scene-inner wide">
         <p class="eyebrow" data-reveal="fade">PARENT VOICE GUIDANCE</p>
         <h2 class="display" data-reveal="widow">Become a storyteller.<br><span class="gold-script">No acting lessons needed.</span></h2>
@@ -164,25 +151,18 @@
         </div>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- VI · the ages -->
     <section class="scene" data-chapter="VI · THE AGES" data-accent="#f5c98a" data-name="The ages" data-mode="7" data-tint>
-      <span class="scene-num" aria-hidden="true">06</span>
       <div class="scene-inner wide">
         <p class="eyebrow" data-reveal="fade">AGE-BASED STORYTELLING</p>
         <h2 class="spread-head" data-reveal="widow">EVERY AGE HAS <span class="gold-script">its own story</span></h2>
         <p class="display-sub" data-reveal="fade" style="--i:1">From 0 to 10, in five age groups: each one speaks its own language.</p>
         <div class="age-timeline" id="ageChips"></div>
-        <p class="micro age-hint">Tap an age to hear how the story changes</p>
         <div class="age-panel" id="agePanel"></div>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- VII · parents -->
     <section class="scene" data-chapter="VII · PARENTS" data-accent="#f0cf9a" data-name="Parents" data-mode="7">
-      <span class="scene-num" aria-hidden="true">07</span>
       <div class="scene-inner wide">
         <div class="counter" data-reveal="fade"><span id="storyCounter">1,767</span><p>stories created by a community of parents</p></div>
         <p class="eyebrow" data-reveal="fade" style="--i:1">WHAT PARENTS SAY</p>
@@ -190,27 +170,25 @@
         <div class="review-nav"><button class="circle-btn" id="revPrev" aria-label="Previous reviews">←</button><button class="circle-btn" id="revNext" aria-label="More reviews">→</button></div>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- VIII · stars / credits -->
     <section class="scene" data-chapter="VIII · STARS" data-accent="#f3d38a" data-name="Stars" data-mode="8" data-tint>
-      <span class="scene-num" aria-hidden="true">08</span>
       <div class="scene-inner wide">
         <p class="eyebrow" data-reveal="fade">STARS &amp; CREDITS</p>
         <h2 class="display" data-reveal="widow">Every story costs <span class="gold-script">one Star</span>.<br>And today, Stars are free.</h2>
-        <p class="quiet" data-reveal="fade" style="--i:1">It's the perfect night to try storiesAI. Three Stars are already in your pouch, and every pouch below is a gift in this edition — no card, no subscription, no expiry.</p>
-        <div class="pack-row" id="starPacks"></div>
-        <div class="stars-note" data-reveal="fade" style="--i:2"><span><i>✦</i> 3 Stars to begin</span><span><i>✦</i> 1 Star per story</span><span><i>✦</i> No card ever</span></div>
-        <p style="margin-top:clamp(26px,4vh,38px)" data-reveal="fade" style="--i:3"><a class="pill-gold" href="#/create">CREATE YOUR STORY FOR FREE</a></p>
+        <p class="quiet" data-reveal="fade" style="--i:1">It's the perfect night to try storiesAI.</p>
+        <div class="star-ledger" data-reveal="fade" style="--i:2">
+          <div class="star-item"><span class="n">3</span><b>Stars to begin</b><small>Gifted the moment you arrive</small></div>
+          <div class="star-item"><span class="n">1</span><b>Star per story</b><small>One tale, written for tonight</small></div>
+          <div class="star-item"><span class="n">0</span><b>To pay, ever</b><small>No card, no subscription, no expiry</small></div>
+        </div>
+        <p data-reveal="fade" style="--i:3"><a class="pill-gold" href="#/create">CREATE YOUR STORY FOR FREE</a></p>
+        <p class="scene-foot" data-reveal="fade" style="--i:4">Nothing to pay: right now, Stars are a gift · <button class="quiet-link" id="starTopUp" type="button">Add free Stars</button></p>
       </div>
     </section>
-
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
     <!-- IX · how it works -->
     <section class="scene" data-chapter="IX · HOW IT WORKS" data-accent="#b9c4f0" data-name="How it works" data-mode="1">
-      <span class="scene-num" aria-hidden="true">09</span>
       <div class="scene-inner wide">
-        <p class="eyebrow" data-reveal="fade">THE WHOLE RITUAL, IN SIX MOVES</p>
+        <p class="eyebrow" data-reveal="fade">HOW IT WORKS</p>
         <h2 class="display" data-reveal="widow">How a storiesAI story <span class="gold-script">is born</span></h2>
         <div class="how-grid">
           <div class="how-item" data-reveal="fade"><div><b>A story made to measure</b><p>Choose the hero's name, age, a value, a setting, a mood and the length. Add a little villain who makes amends, if you like.</p></div></div>
@@ -220,22 +198,27 @@
           <div class="how-item" data-reveal="fade" style="--i:4"><div><b>Let's talk about it</b><p>Three questions below the story to ask out loud before turning off the light.</p></div></div>
           <div class="how-item" data-reveal="fade" style="--i:5"><div><b>Safe, and yours alone</b><p>No violence, nothing scary. Made on your device, kept in your library, works with the internet off.</p></div></div>
         </div>
-        <p class="eyebrow" style="margin-top:clamp(30px,5vh,50px)" data-reveal="fade">A FEW QUESTIONS, ANSWERED</p>
-        <h2 class="spread-head" style="font-size:clamp(19px,2.6vw,32px)" data-reveal="widow">Things parents <span class="gold-script">ask us</span></h2>
-        <div class="faq" id="faqList"></div>
       </div>
     </section>
 
-    <span class="scene-orn" aria-hidden="true"><i></i>✦<i></i></span>
+    <!-- X · questions -->
+    <section class="scene" data-chapter="X · QUESTIONS" data-accent="#9ec4ee" data-name="Questions" data-mode="1">
+      <div class="scene-inner narrow">
+        <p class="eyebrow" data-reveal="fade">FREQUENTLY ASKED QUESTIONS</p>
+        <h2 class="display" data-reveal="widow">Everything you <span class="gold-script">want to know</span></h2>
+        <p class="scene-lede" data-reveal="fade" style="--i:1">The small print, told gently.</p>
+        <div class="faq" id="faqList"></div>
+      </div>
+    </section>
     <!-- X · the end -->
-    <section class="scene end" data-chapter="X · THE END" data-accent="#f7e2b0" data-name="The end" data-mode="0" data-tint>
+    <section class="scene end" data-chapter="XI · THE END" data-accent="#f7e2b0" data-name="The end" data-mode="0" data-tint>
       <div class="end-halo" aria-hidden="true" data-parallax="0.08"></div>
       <div class="scene-inner">
         <p class="eyebrow" data-reveal="fade">HAPPILY EVER AFTER</p>
         <h2 class="display" data-reveal="widow">This very night,<br><span class="gold-script">their story</span> awaits you.</h2>
         <p class="quiet" data-reveal="fade" style="--i:1">The bedtime ritual becomes shared magic. Ready in thirty seconds, remembered forever.</p>
         <p data-reveal="fade" style="--i:2"><a class="pill-gold" href="#/create">CREATE YOUR FIRST STORY</a></p>
-        <p class="foot-note" data-reveal="fade" style="--i:3">Free, nothing to pay · Installable · Works offline · Stories in English, Hindi &amp; Bengali</p>
+        <p class="foot-note" data-reveal="fade" style="--i:3">Free, nothing to pay · Invite a friend and get more Stars</p>
       </div>
     </section>
   </div>
@@ -249,7 +232,7 @@
       <nav class="foot-links" aria-label="Footer">
         <a href="#/create">Create a story</a>
         <a href="#/library">Library</a>
-        <a href="#" data-scene="13">FAQ</a>
+        <a href="#" data-scene="11">FAQ</a>
         <button id="installFooter">Install app</button>
         <button id="settingsBtn">Settings</button>
         <button id="settingsFooter">Storyteller &amp; AI</button>

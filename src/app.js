@@ -475,7 +475,7 @@
     ];
     var ledger = $('#featureCards');
     if (ledger) ledger.innerHTML = features.map(function (f, i) {
-      return '<div class="ledger-item" data-reveal="fade" style="--i:' + (i + 2) + '"><span class="n">0' + (i + 1) + '</span><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
+      return '<div class="ledger-item" data-reveal="fade" style="--i:' + (i + 2) + '"><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>';
     }).join('');
 
     /* ---- III · the music: a real little player, never autoplayed ---- */
@@ -562,26 +562,14 @@
       return '<div class="review"><div class="stars" aria-label="' + r.stars + ' out of 5">' + '★'.repeat(r.stars) + '</div><blockquote>“' + esc(r.text) + '”</blockquote><div class="who">' + esc(r.name) + '<span>' + esc(r.note) + '</span></div></div>';
     }).join('');
 
-    var packs = [
-      { n: 10, name: 'Pouch of Stars', blurb: 'Ten bedtime stories: a handful of magical evenings to get started.', tag: '' },
-      { n: 30, name: 'Chest of Stars', blurb: 'A month of stories, one every night: the bedtime ritual never stops.', tag: 'Most loved' },
-      { n: 100, name: 'Sky of Stars', blurb: 'Months of tales, for brothers and sisters too.', tag: '' }
-    ];
-    $('#starPacks').innerHTML = packs.map(function (p, i) {
-      return '<div class="pack ' + (p.tag ? 'popular' : '') + '" data-reveal="fade" style="--i:' + (i + 2) + '">' + (p.tag ? '<span class="tag">' + p.tag + '</span>' : '') +
-        '<div class="amount">' + p.n + '<small>Stars</small></div><h4>' + esc(p.name) + '</h4><p>' + esc(p.blurb) + '</p>' +
-        '<div class="free-line"><span class="free">Free · always</span></div>' +
-        '<button class="btn-outline" data-pack="' + p.n + '">✦ ADD ' + p.n + ' FREE STARS</button></div>';
-    }).join('');
-
     $('#faqList').innerHTML = D.FAQ.map(function (f) {
       return '<div class="faq-item"><button class="faq-q" aria-expanded="false">' + esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button><div class="faq-a"><p>' + esc(f.a) + '</p></div></div>';
     }).join('');
 
-    $('#starPacks').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-pack]'); if (!b) return;
-      S.stars += parseInt(b.dataset.pack, 10); save(); syncStars(); toast('✦ ' + b.dataset.pack + ' Stars added to your pouch');
-    });
+    /* the landing no longer sells pouches; the free top-up stays available as a
+       quiet text link, so nothing was lost — it just stopped looking like pricing */
+    var topUp = $('#starTopUp');
+    if (topUp) topUp.onclick = function () { addStarsModal('A pouch of free Stars'); };
     $('#faqList').addEventListener('click', function (e) {
       var q = e.target.closest('.faq-q'); if (!q) return;
       var item = q.parentNode;
@@ -665,7 +653,7 @@
     panel.innerHTML = '<p class="ap-age">' + esc(a.label) + '</p>' +
       '<p class="ap-hint">' + esc(a.hint) + '</p>' +
       '<p class="ap-quote">“' + esc(sample.replace('{name}', 'Riya')) + '”</p>' +
-      '<div class="ap-meta"><span>sentences <b>' + a.sentences + '</b></span><span>words <b>' + esc(a.words) + '</b></span><span>voice <b>' + esc(a.bank === 'soft' ? 'warm &amp; lulling' : a.bank === 'bright' ? 'silly &amp; quick' : 'wise &amp; winding') + '</b></span></div>';
+      '<div class="ap-meta"><span>sentences <b>' + a.sentences + '</b></span><span>words <b>' + esc(a.words) + '</b></span><span>voice <b>' + esc(a.bank === 'soft' ? 'warm & lulling' : a.bank === 'bright' ? 'silly & quick' : 'wise & winding') + '</b></span></div>';
     panel.classList.remove('swap'); void panel.offsetWidth; panel.classList.add('swap');
     $$('.age-timeline .age-chip').forEach(function (b) {
       var on = b.dataset.age === a.id;
@@ -1421,7 +1409,7 @@
     $('#installFooter').onclick = installModal;
     $('#installBtn').onclick = function () { if (deferredInstall) { deferredInstall.prompt(); } else { installModal(); } };
     $('#menuBtn').onclick = function () {
-      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="10">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
+      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="11">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
         function (m, close) {
           $$('[data-close]', m).forEach(function (a) { a.onclick = function () { close(); }; });
           /* the AWAKE / ASLEEP rail is a phone-friendly line only, so the night

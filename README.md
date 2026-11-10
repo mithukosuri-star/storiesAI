@@ -52,15 +52,16 @@ Once installed, the shell, the particle sky, music and stories all work with no 
 | **Cursor** | A custom two-part pointer like the reference: a cream dot that tracks instantly with a gold trailing halo that swells on anything clickable; primary buttons are magnetic and lean towards the pointer. Silently disabled on touch and for `prefers-reduced-motion`. |
 | **Opening** | Pure-CSS entrance veil over the wordmark → full-bleed starfield → giant Fraunces italic "No one has ever told it…", a hairline rule, one tappable golden sentence, `LISTEN WITH SOUND`, `SCROLL TO ENTER`. Fixed wordmark, `SIGN IN`, `CREATE A STORY`, vertical `AWAKE / ASLEEP` rail. |
 | **I · Prologue** | The wish: "Personalized bedtime stories for children" over the night sky. |
-| **II · The journey** | A five-part ledger (name · age · value · place · a little villain) — rules instead of cards — then the statement scene "And a little villain." with a particle pull-in. |
-| **III · The music** | A real little player: four moods as a dial, a live waveform, `PLAY / STOP / MUTE`, a moon-orb that takes the mood's colour. The chapter is natively *sticky-pinned* on tall screens (the copy and the player stay while the sky drifts), and unpins itself on phones and short screens so nothing is ever cut off. Nothing autoplays. |
+| **II · The journey** | A five-part ledger (name · age · value · place · a little villain) in italic script over hairline rules — no cards, no numbers — then the statement scene "And a little villain." with a particle pull-in. |
+| **III · The music** | One centred composition: a glowing orb that takes the mood's colour, the mood name, a live waveform, transport as quiet text links (`PLAY / STOP / MUTE`), then a full-width row of four mood **circles** with labels and italic one-line hints. *Sticky-pinned* on tall screens, unpinned on phones and short screens. Nothing autoplays. |
 | **IV · The sounds** | Golden words inside three real sentences — tap *wind*, *bells*, *thunderstorm*; the music ducks under each one, the word rests for three seconds and a haptic tick fires on phones. A live status line names the sound. |
-| **V · The voice** | Four chapter voice colours (Green / Yellow / Blue / Red) as a spectrum. Selecting one swaps in a **written sample passage**, the reading cue, and a `HEAR THE RHYTHM` button that speaks the guidance. |
+| **V · The voice** | Four chapter voice colours (Green / Yellow / Blue / Red) as four borderless **circles**. Selecting one swaps in a **written sample passage** on a ruled band, the reading cue, and a `HEAR THE RHYTHM` link that speaks the guidance. |
 | **VI · The ages** | Five age groups on a **timeline**: each selection reveals an age-specific opening line, the sentence/word budget and the voice character. |
-| **VII · Parents** | Community counter and twelve parent reviews on a snap track. |
-| **VIII · Stars** | The Stars / credits explanation: one Star per story, three gifted, pouches free in this edition. |
-| **IX · How it works** | Six numbered moves, then the FAQ accordion. |
-| **X · The end** | Happily-ever-after CTA over a halo, then an editorial two-column footer. |
+| **VII · Parents** | Community counter and twelve parent reviews — borderless quotes on a hairline, in a snap track. |
+| **VIII · Stars** | The Stars / credits explanation as a three-column ledger of numerals (3 · 1 · 0), one italic line, and a quiet free-Stars link — no pricing cards. |
+| **IX · How it works** | Six moves as plain prose bars — no counters. |
+| **X · Questions** | The FAQ accordion in its own narrow column. |
+| **XI · The end** | Happily-ever-after CTA over a halo, then a centred, minimal footer. |
 
 The particle sky is a single canvas (`src/stars.js`) with nine choreographed modes — starfield,
 nebula drift, spiral vortex, luminous ring, radial burst, tree of light, soft wave, constellation,
