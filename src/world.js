@@ -1079,6 +1079,24 @@ window.CWorld = (function () {
     },
     count: function () { return S.length; },
     stop: function (why) { handOver(why || 'stopped'); },
+    dispose: function () {
+      try {
+        dead = true; paused = true;
+        if (raf) { cancelAnimationFrame(raf); raf = null; }
+        var ext = gl && gl.getExtension && gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+      } catch (e) {}
+    },
+    /* A modal, the reader or a hidden tab are moments when nobody is looking at
+       the sky. Freezing the render loop there is free battery — 95k points at
+       60 fps is otherwise pure waste behind a blurred dialog. */
+    setPaused: function (v) {
+      var want = !!v;
+      if (want === paused) return;
+      paused = want || document.hidden;
+      if (paused) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (!dead) { t0 = performance.now() - time * 1000; render(); }
+    },
     turn: function () { return Math.max(0, Math.min(1, prog / 0.055)); },
     /* re-dress the sky for a story setting: {sky:[top,bottom], accent, scene}.
        The environment profile in data.js owns the horizon geometry and the

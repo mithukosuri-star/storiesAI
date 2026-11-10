@@ -137,6 +137,7 @@ window.CStars = (function () {
     return q;
   }
   function frame(ts) {
+    if (forcePaused) { raf = null; return; }
     raf = requestAnimationFrame(frame);
     try { draw(ts); } catch (e) { /* one bad frame must not stop the sky */ }
   }
@@ -207,8 +208,16 @@ window.CStars = (function () {
     });
     last = performance.now(); raf = requestAnimationFrame(frame);
   }
+  var forcePaused = false;
   return {
     init: init,
+    /* same contract as the WebGL sky: a hidden tab, an open dialog or the reader
+       should not keep repainting a starfield nobody is looking at */
+    setPaused: function (v) {
+      forcePaused = !!v;
+      if (forcePaused) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (!raf && P.length) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    },
     setMode: function (m) { mode = parseInt(m, 10) || 0; },
     setAwake: function (a) { awake = !!a; },
     /* the same place profile that drives the WebGL world drives the 2D sky */

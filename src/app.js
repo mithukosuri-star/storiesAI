@@ -51,8 +51,18 @@
   /* ---------------- utilities ---------------- */
   var toastTimer;
   function toast(msg) {
-    var t = $('#toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+    var t = $('#toast'); if (!t) return;
+    /* re-announce even when the text is identical: clear first, then set, so a
+       screen reader reads the second tap as well as the first */
+    t.classList.remove('show');
+    t.textContent = msg;
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+    t.setAttribute('aria-atomic', 'true');
+    /* force a frame so the transition restarts on rapid repeats */
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2800);
   }
   function label(group, id) {
     var list = { age: D.AGES, value: D.VALUES, setting: D.SETTINGS, length: D.LENGTHS, mood: D.MOODS, language: D.LANGUAGES }[group] || [];
@@ -62,13 +72,48 @@
   function findSetting(id) { return D.SETTINGS.filter(function (s) { return s.id === id; })[0] || D.SETTINGS[0]; }
   function findMood(id) { return D.MOODS.filter(function (m) { return m.id === id; })[0] || D.MOODS[0]; }
   function prettyDate(iso) { try { return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
+  var modalReturn = null;
   function modal(html, onMount) {
     var root = $('#modalRoot');
-    root.innerHTML = '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true"><button class="close" aria-label="Close">×</button>' + html + '</div></div>';
-    var close = function () { root.innerHTML = ''; };
+    modalReturn = document.activeElement;
+    root.innerHTML = '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="close" aria-label="Close">×</button>' + html + '</div></div>';
+    var panel = $('.modal', root);
+    /* the first heading is the dialog's name, so screen readers announce it */
+    var h = panel.querySelector('h3');
+    if (h) { h.id = 'modalTitle'; } else { panel.removeAttribute('aria-labelledby'); }
+    var closed = false;
+    if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(true);
+    if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(true);
+    function close() {
+      if (closed) return; closed = true;
+      root.innerHTML = '';
+      if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(false);
+      if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(false);
+      document.removeEventListener('keydown', onKey, true);
+      /* send focus back where it came from — never to the top of the document */
+      if (modalReturn && modalReturn.focus) { try { modalReturn.focus({ preventScroll: true }); } catch (e) {} }
+      modalReturn = null;
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      var items = panel.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
     $('.modal-back', root).addEventListener('click', function (e) { if (e.target === this) close(); });
     $('.close', root).addEventListener('click', close);
-    if (onMount) onMount($('.modal', root), close);
+    document.addEventListener('keydown', onKey, true);
+    if (onMount) onMount(panel, close);
+    /* focus the first real control, but never the close button alone */
+    setTimeout(function () {
+      var target = panel.querySelector('[data-autofocus]') ||
+        panel.querySelector('.pill-gold, .menu-door, input, select, textarea, a[href]:not(.close)') ||
+        panel.querySelector('.close');
+      if (target && target.focus) { try { target.focus({ preventScroll: true }); } catch (e) {} }
+    }, 40);
     return close;
   }
   function confirmModal(title, body, onYes) {
@@ -99,6 +144,11 @@
     paw: 'M8 14.5c-2 1.4-3 3-2.2 4.4.9 1.5 3.2 1.2 6.2 1.2s5.3.3 6.2-1.2c.8-1.4-.2-3-2.2-4.4|M7 9.5a1.8 1.8 0 1 0 0-.1|M17 9.5a1.8 1.8 0 1 0 0-.1|M12 6a1.8 1.8 0 1 0 0-.1',
     spare: 'M12 3.2 13.6 8.4 18.8 10l-5.2 1.6L12 16.8 10.4 11.6 5.2 10l5.2-1.6L12 3.2Z'
   };
+  /* A setting's `scene` maps to one of the line icons above. Emoji were the one
+     place the design broke its own language (and they render differently on
+     every OS), so covers now draw the same hairline glyph as the wizard. */
+  var SCENE_ICON = { forest: 'forest', castle: 'castle', island: 'island', space: 'planet', city: 'city', mountain: 'mountain', sea: 'sea', farm: 'mountain' };
+  function sceneGlyph(setting) { return ICONS[SCENE_ICON[setting.scene]] ? SCENE_ICON[setting.scene] : 'star'; }
   function iconGlyph(k) {
     var d = ICONS[k] || ICONS.spare;
     return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">' +
@@ -212,6 +262,8 @@
       if (railChapter) railChapter.style.top = (pct * 100) + '%';
       if (cue) { var co = sy > 120 ? '0' : '1'; if (cue.style.opacity !== co) { cue.style.opacity = co; cue.style.pointerEvents = co === '0' ? 'none' : 'auto'; } }
       if (window.CWorld && window.CWorld.setProgress) window.CWorld.setProgress(pct);
+      var sp = $('#scrollProgress');
+      if (sp) sp.style.width = (pct * 100).toFixed(2) + '%';
     }
 
     function tick() {
@@ -524,7 +576,7 @@
       soundTap(b);
       var sfx = D.SFX[b.dataset.sfx];
       var fb = $('#soundFeedback');
-      if (fb && sfx) { fb.textContent = sfx.emoji + '  ' + sfx.label + ' · the music dipped to make room'; fb.classList.add('active'); }
+      if (fb && sfx) { fb.textContent = '✦  ' + sfx.label + ' · the music dipped to make room'; fb.classList.add('active'); }
     });
 
     /* ---- V · voice guidance: a spectrum with a real sample passage ---- */
@@ -562,8 +614,11 @@
       return '<div class="review"><div class="stars" aria-label="' + r.stars + ' out of 5">' + '★'.repeat(r.stars) + '</div><blockquote>“' + esc(r.text) + '”</blockquote><div class="who">' + esc(r.name) + '<span>' + esc(r.note) + '</span></div></div>';
     }).join('');
 
-    $('#faqList').innerHTML = D.FAQ.map(function (f) {
-      return '<div class="faq-item"><button class="faq-q" aria-expanded="false">' + esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button><div class="faq-a"><p>' + esc(f.a) + '</p></div></div>';
+    $('#faqList').innerHTML = D.FAQ.map(function (f, i) {
+      var id = 'faq-a-' + i;
+      return '<div class="faq-item"><button class="faq-q" id="faq-q-' + i + '" aria-expanded="false" aria-controls="' + id + '">' +
+        esc(f.q) + '<span class="plus" aria-hidden="true">+</span></button>' +
+        '<div class="faq-a" id="' + id + '" role="region" aria-labelledby="faq-q-' + i + '" hidden><p>' + esc(f.a) + '</p></div></div>';
     }).join('');
 
     /* the landing no longer sells pouches; the free top-up stays available as a
@@ -573,8 +628,23 @@
     $('#faqList').addEventListener('click', function (e) {
       var q = e.target.closest('.faq-q'); if (!q) return;
       var item = q.parentNode;
-      var open = item.classList.toggle('open');
+      var ans = item.querySelector('.faq-a');
+      var open = !item.classList.contains('open');
+      item.classList.toggle('open', open);
       q.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (ans) {
+        /* measured, not guessed: the old 360px cap clipped long answers */
+        if (open) {
+          ans.hidden = false;
+          var target = ans.scrollHeight;
+          ans.style.maxHeight = '0px';
+          requestAnimationFrame(function () { ans.style.maxHeight = target + 'px'; });
+        } else {
+          ans.style.maxHeight = Math.max(0, ans.scrollHeight) + 'px';
+          requestAnimationFrame(function () { ans.style.maxHeight = '0px'; });
+          setTimeout(function () { if (!item.classList.contains('open')) ans.hidden = true; }, 460);
+        }
+      }
     });
     $('#revPrev').onclick = function () { $('#reviewTrack').scrollBy({ left: -460, behavior: 'smooth' }); };
     $('#revNext').onclick = function () { $('#reviewTrack').scrollBy({ left: 460, behavior: 'smooth' }); };
@@ -589,6 +659,21 @@
 
   /* ---- the music chapter: one shared little player ---- */
   var homeAudible = false, homeMoodId = 'gentle';
+  /* The browers only let audio start inside a real gesture. The old build only
+     counted a tap on the music controls, so tapping a golden word in the hero
+     left the score silent until the visitor found PLAY. Any first gesture now
+     opens the audio context silently (no sound until asked for). */
+  var audioUnlocked = false;
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try { if (A.unlock) A.unlock(); else if (A.setSound) A.setSound(true); } catch (e) {}
+    window.removeEventListener('pointerdown', unlockAudio, true);
+    window.removeEventListener('keydown', unlockAudio, true);
+  }
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+
   function homeMood(id) {
     homeMoodId = id;
     var m = findMood(id);
@@ -694,7 +779,7 @@
     }, REST_MS);
 
     var sfx = D.SFX[btn.dataset.sfx];
-    if (sfx) toast(sfx.emoji + ' ' + sfx.label);
+    if (sfx) toast('✦ ' + sfx.label);
   }
 
   /* ---------------- wizard ---------------- */
@@ -775,7 +860,7 @@
     if (vNote) vNote.textContent = w.villain
       ? 'A little mischief-maker who always makes amends before the last page.'
       : 'Only adventure and wonder — nobody to be afraid of.';
-    renderStep(); renderSummary(); syncStars();
+    renderStep(0); renderSummary(); syncStars();
   }
   function renderSummary() {
     var w = S.wizard;
@@ -788,12 +873,52 @@
     if (w.type === 'series') rows.splice(2, 0, ['Chapter', String(w.chapterNumber || 1)]);
     $('#summaryList').innerHTML = rows.map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd></div>'; }).join('');
   }
-  function renderStep() {
-    $$('.step').forEach(function (s, i) { s.classList.toggle('active', i === wizardStep); });
-    $('#wizProgress').innerHTML = [0, 1, 2, 3, 4].map(function (i) { return '<i class="' + (i < wizardStep ? 'done' : i === wizardStep ? 'active' : '') + '"></i>'; }).join('');
+  var STEP_NAMES = ['The hero', 'Age & length', 'The value', 'The place', 'Mood'];
+  function renderStep(dir) {
+    $$('.step').forEach(function (s, i) {
+      var on = i === wizardStep;
+      s.classList.toggle('active', on);
+      s.classList.remove('from-left', 'from-right');
+      if (on && dir) s.classList.add(dir > 0 ? 'from-right' : 'from-left');
+    });
+    var p = $('#wizProgress');
+    if (p) {
+      p.innerHTML = STEP_NAMES.map(function (n, i) {
+        var st = i < wizardStep ? 'done' : i === wizardStep ? 'active' : '';
+        return '<i class="' + st + '"><span class="sr-only">' + n + (i === wizardStep ? ' — current step' : '') + '</span></i>';
+      }).join('');
+      p.setAttribute('role', 'progressbar');
+      p.setAttribute('aria-valuemin', '1');
+      p.setAttribute('aria-valuemax', String(STEP_NAMES.length));
+      p.setAttribute('aria-valuenow', String(wizardStep + 1));
+      p.setAttribute('aria-label', 'Step ' + (wizardStep + 1) + ' of ' + STEP_NAMES.length + ' · ' + STEP_NAMES[wizardStep]);
+    }
+    var counter = $('#wizStepLabel');
+    if (counter) counter.textContent = 'STEP ' + (wizardStep + 1) + ' OF ' + STEP_NAMES.length;
     $('#wizPrev').style.visibility = wizardStep === 0 ? 'hidden' : 'visible';
     $('#wizNext').style.display = wizardStep === 4 ? 'none' : 'inline-flex';
     $('#wizCreate').style.display = wizardStep === 4 ? 'inline-flex' : 'none';
+    /* every step's own heading takes focus so the screen reader follows the flow */
+    var activeStep = $('.step.active');
+    if (activeStep && dir) {
+      var h = activeStep.querySelector('h3');
+      if (h) { h.setAttribute('tabindex', '-1'); try { h.focus({ preventScroll: true }); } catch (e) {} }
+    }
+  }
+  /* inline, non-modal validation: the field itself says what is wrong */
+  function flagName(problem) {
+    var input = $('#namesInput'); if (!input) return;
+    input.classList.add('is-invalid');
+    input.setAttribute('aria-invalid', 'true');
+    var msg = $('#nameError');
+    if (msg) { msg.textContent = problem; msg.classList.add('show'); }
+    input.focus();
+    setTimeout(function () { input.classList.remove('is-invalid'); }, 700);
+  }
+  function clearNameFlag() {
+    var input = $('#namesInput'); if (!input) return;
+    input.classList.remove('is-invalid'); input.removeAttribute('aria-invalid');
+    var msg = $('#nameError'); if (msg) { msg.textContent = ''; msg.classList.remove('show'); }
   }
   function initWizard() {
     ['choiceType', 'choiceAge', 'choiceLength', 'choiceValue', 'choiceSetting', 'wizMoods', 'choiceLang'].forEach(function (id) {
@@ -820,7 +945,7 @@
         save(); renderWizard();
       });
     });
-    $('#namesInput').addEventListener('input', function () { S.wizard.names = this.value; save(); renderSummary(); });
+    $('#namesInput').addEventListener('input', function () { S.wizard.names = this.value; save(); renderSummary(); if (this.value.trim()) clearNameFlag(); });
     $('#extrasInput').addEventListener('input', function () { S.wizard.extras = this.value; save(); });
     $('#villainToggle').addEventListener('change', function () { S.wizard.villain = this.checked; save(); renderSummary(); });
     /* the custom fields are re-rendered with the chips, so the listener is delegated */
@@ -850,10 +975,12 @@
       haptic(null);
       renderSummary();
     });
-    $('#wizPrev').onclick = function () { if (wizardStep > 0) { wizardStep--; renderStep(); } };
+    $('#wizPrev').onclick = function () { if (wizardStep > 0) { wizardStep--; renderStep(-1); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
     $('#wizNext').onclick = function () {
-      if (wizardStep === 0 && !S.wizard.names.trim()) { toast('First, give the hero a name ✦'); $('#namesInput').focus(); return; }
-      if (wizardStep < 4) { wizardStep++; renderStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      if (wizardStep === 0 && !S.wizard.names.trim()) { flagName('Give the hero a name to begin'); return; }
+      if (wizardStep === 0 && !E.isValidNames(S.wizard.names)) { flagName(MAX_NAME_LENGTH + ' characters or fewer, please'); return; }
+      clearNameFlag();
+      if (wizardStep < 4) { wizardStep++; renderStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     };
     $('#wizCreate').onclick = function () { createStory(); };
     renderWizard();
@@ -989,7 +1116,7 @@
       ? ' · Pouch ' + txn.balanceBefore + ' → ' + txn.balanceAfter + ' Stars' : '';
     var chaptersHTML = story.chapters.map(function (c, i) {
       var v = D.VOICES[c.voice] || D.VOICES.green;
-      return '<article class="chapter" id="chap-' + i + '" style="--voice:' + v.css + '">' +
+      return '<article class="chapter" id="chap-' + i + '" lang="' + esc(story.cfg.language || 'en') + '" style="--voice:' + v.css + '">' +
         '<div class="voice-tag"><i></i>' + v.label + ' voice · ' + v.hint + '</div>' +
         '<div class="voice-hint"><span class="vh-label">' + v.icon + ' ' + esc(v.short) + '</span>' +
           '<span class="vh-line">' + esc(v.line) + '</span></div>' +
@@ -1001,7 +1128,7 @@
     }).join('');
 
     var html =
-      '<div class="story-cover"><div class="scene-art">' + scenery(s, m, false) + '</div><div class="cover-text">' +
+      '<div class="story-cover" lang="' + esc(story.cfg.language || 'en') + '"><div class="scene-art">' + scenery(s, m, false) + '</div><div class="cover-text">' +
       '<div class="meta">✦ ' + esc(story.source === 'ai' ? 'Written by your AI storyteller' : 'Woven on this device') + ' · ' + esc(prettyDate(story.createdAt)) + esc(pouchSummary) + '</div>' +
       '<h1>' + esc(story.title) + '</h1><div class="cover-meta">' +
       '<span class="pill">' + esc(label('age', story.cfg.age)) + '</span><span class="pill">' + esc(String(story.cfg.customValue || '').trim() || label('value', story.cfg.value)) + '</span>' +
@@ -1018,7 +1145,8 @@
       '<button class="tool-btn" id="printStory">⎙ Print</button>' +
       '<button class="tool-btn" id="deleteStory" title="Remove this story">Remove</button>' +
       '</div>' +
-      '<div class="chapter-nav">' + story.chapters.map(function (c, i) { return '<button data-chap="' + i + '" title="' + esc(c.title) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' +
+      '<div class="chapter-nav">' + story.chapters.map(function (c, i) { return '<button data-chap="' + i + '" title="' + esc(c.title) + '" aria-label="Chapter ' + (i + 1) + ': ' + esc(c.title) + '">' + (i + 1) + '</button>'; }).join('') + '</div>' +
+      '<div class="read-rail" id="readProgress" aria-hidden="true">' + story.chapters.map(function () { return '<i></i>'; }).join('') + '</div>' +
       chaptersHTML +
       '<div class="end-card"><p class="eyebrow">Before the light goes off</p><h3>Let’s talk about it</h3><ol>' +
       story.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ol>' +
@@ -1041,7 +1169,12 @@
       if (nav) {
         $$('.chapter-nav button').forEach(function (b) { b.classList.remove('active'); });
         nav.classList.add('active');
-        $('#chap-' + nav.dataset.chap).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var target = $('#chap-' + nav.dataset.chap);
+        if (target) {
+          var bar = $('.reader-toolbar');
+          var offset = (bar ? bar.offsetHeight : 0) + 96;
+          window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+        }
         return;
       }
       if (e.target.closest('#musicToggle')) {
@@ -1072,6 +1205,28 @@
     };
     $$('.chapter-nav button')[0] && $$('.chapter-nav button')[0].classList.add('active');
     $('#musicToggle').classList.toggle('active', A.isMusicOn());
+    watchChapters();
+  }
+
+  /* The chapter dots used to highlight only when clicked. As the parent simply
+     reads downwards they should follow along, and the tiny page rail on the
+     left should fill like a bookmark. One IntersectionObserver, no scroll loop. */
+  var chapterObserver = null;
+  function watchChapters() {
+    if (chapterObserver) { chapterObserver.disconnect(); chapterObserver = null; }
+    var arts = $$('.chapter'); if (!arts.length || typeof IntersectionObserver === 'undefined') return;
+    chapterObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var idx = arts.indexOf(en.target);
+        $$('.chapter-nav button').forEach(function (b, i) { b.classList.toggle('active', i === idx); });
+        $$('#readProgress i').forEach(function (seg, i) { seg.classList.toggle('on', i <= idx); });
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    arts.forEach(function (a) { chapterObserver.observe(a); });
+    /* the rail length matches the number of chapters */
+    var rail = $('#readProgress');
+    if (rail) rail.style.setProperty('--chapters', String(arts.length));
   }
 
   /* ---------------- dark-room reading: focus, wake lock, night mode ----------------
@@ -1209,7 +1364,7 @@
       $('#libraryGrid').innerHTML = list.map(function (s) {
         var st = findSetting(s.cfg.setting), md = findMood(s.cfg.mood);
         return '<div class="story-card" data-open="' + esc(s.id) + '" role="button" tabindex="0">' +
-          '<div class="cover" style="--c1:' + st.sky[0] + ';--c2:' + st.sky[1] + '">' + scenery(st, md, true) + '<span class="em">' + st.emoji + '</span></div>' +
+          '<div class="cover" style="--c1:' + st.sky[0] + ';--c2:' + st.sky[1] + '">' + scenery(st, md, true) + '<span class="em" aria-hidden="true">' + iconGlyph(sceneGlyph(st)) + '</span></div>' +
           '<div class="body"><h4>' + esc(s.title) + '</h4><div class="meta">' + esc(String(s.cfg.customValue || '').trim() || label('value', s.cfg.value)) + ' · ' + esc(label('age', s.cfg.age)) + '<br>' + esc(prettyDate(s.createdAt)) + (s.cfg.type === 'series' ? ' · Chapter ' + esc(s.chapterNumber || 1) : '') + '</div></div>' +
           '<div class="foot"><span>' + esc((D.LANGUAGES.filter(function (l) { return l.id === s.cfg.language; })[0] || D.LANGUAGES[0]).label) + ' · ' + (s.source === 'ai' ? 'AI' : 'offline') + '</span><button data-del="' + esc(s.id) + '">Remove</button></div></div>';
       }).join('');
@@ -1270,6 +1425,12 @@
           save(); renderLibrary(); toast('Imported ' + added + ' story' + (added === 1 ? '' : 'ies'));
         } catch (err) { toast('That file is not a storiesAI backup'); }
       };
+      var importBtn = $('#importBtn');
+      if (importBtn) { importBtn.textContent = '↑ READING BACKUP…'; importBtn.disabled = true; }
+      var done = function () { if (importBtn) { importBtn.textContent = '↑ IMPORT A BACKUP'; importBtn.disabled = false; } };
+      reader.onerror = function () { done(); toast('That file could not be read'); };
+      var prevOnload = reader.onload;
+      reader.onload = function (e) { prevOnload.call(reader, e); done(); };
       reader.readAsText(file); this.value = '';
     };
   }
@@ -1409,14 +1570,27 @@
     $('#installFooter').onclick = installModal;
     $('#installBtn').onclick = function () { if (deferredInstall) { deferredInstall.prompt(); } else { installModal(); } };
     $('#menuBtn').onclick = function () {
-      modal('<h3>Where to?</h3><div class="actions" style="flex-direction:column;align-items:stretch"><a class="pill-gold" href="#/create" data-close>✦ Create a story</a><a class="btn-outline" href="#/library" data-close>My library</a><a class="btn-outline" href="#/home" data-close data-scene="10">How it works</a><a class="btn-outline" href="#/home" data-close data-scene="11">FAQ</a><button class="btn-outline" data-daynight>Awake / asleep</button><button class="btn-outline" data-motion></button><button class="btn-outline" data-sky></button><a class="btn-outline" href="#/home" data-close>Back to the night sky</a></div>',
+      modal('<h3>Where to?</h3><p class="small muted" style="margin:0">Three doors, and a few switches for the night.</p>' +
+        '<div class="menu-sheet">' +
+        '<a class="menu-door primary" data-autofocus href="#/create" data-close><b>✦ Create a story</b><span>Tonight\'s tale · one Star</span></a>' +
+        '<div class="menu-grid">' +
+        '<a class="menu-door" href="#/library" data-close><b>My library</b><span>Everything kept</span></a>' +
+        '<a class="menu-door" href="#/home" data-close data-scene="10"><b>How it works</b><span>Six little moves</span></a>' +
+        '</div>' +
+        '<button class="menu-row" data-daynight>Awake / asleep <b>Change the light</b></button>' +
+        '<button class="menu-row" data-motion>Motion <b>Follow the phone</b></button>' +
+        '<button class="menu-row" data-sky>Sky <b>Flying world</b></button>' +
+        '<a class="menu-row" href="#/home" data-close data-scene="11">Questions<b>FAQ</b></a>' +
+        '<a class="menu-row" href="#/home" data-close>Back to the night sky<b>↑</b></a>' +
+        '</div>',
         function (m, close) {
           $$('[data-close]', m).forEach(function (a) { a.onclick = function () { close(); }; });
           /* the AWAKE / ASLEEP rail is a phone-friendly line only, so the night
              mode toggle lives here too */
           var sk = $('[data-sky]', m);
           if (sk) {
-            sk.textContent = S.settings.sky === 'stars' ? 'Sky: 2D stars' : 'Sky: flying world';
+            var skVal = sk.querySelector('b') || sk;
+            skVal.textContent = S.settings.sky === 'stars' ? '2D stars' : 'Flying world';
             sk.onclick = function () {
               var toStars = S.settings.sky !== 'stars';
               S.settings.sky = toStars ? 'stars' : 'auto';
@@ -1434,7 +1608,7 @@
           }
           var mt = $('[data-motion]', m);
           if (mt) {
-            var paintMotion = function () { mt.textContent = motionForced() ? 'Motion: full ✦' : 'Motion: follow phone'; };
+            var paintMotion = function () { var v = mt.querySelector('b') || mt; v.textContent = motionForced() ? 'Full ✦' : 'Follow the phone'; };
             paintMotion();
             mt.onclick = function () {
               setMotion(!motionForced());
@@ -1526,6 +1700,14 @@
       $('#storyCounter').textContent = (1767 + S.stories.length).toLocaleString();
       if (window.__sceneUpdate) setTimeout(window.__sceneUpdate, 60);
     }
+    document.body.classList.toggle('reading-story', name === 'story');
+    var lightSky = name === 'create' || name === 'story' || name === 'library';
+    if (window.CWorld && window.CWorld.setPaused) window.CWorld.setPaused(false);
+    if (window.CStars && window.CStars.setPaused) window.CStars.setPaused(false);
+    if (window.__skyLight !== lightSky) {
+      window.__skyLight = lightSky;
+      document.body.classList.toggle('sky-light', lightSky);
+    }
     if (name === 'library') renderLibrary();
     if (name === 'create') { renderWizard(); previewSetting(S.wizard.setting); }
     if (name === 'story' && currentStory) renderStory(currentStory);
@@ -1544,7 +1726,10 @@
     } else {
       showView(view);
     }
-    window.scrollTo(0, 0);
+    /* instant, not the global smooth behaviour: switching views must not fly
+       through every chapter of the landing page on the way up */
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
+    catch (e) { window.scrollTo(0, 0); }
   }
   function initRouting() {
     window.addEventListener('hashchange', route);
@@ -1666,7 +1851,16 @@
   /* Sky: 'auto' flies the WebGL world (falling back to the 2D canvas sky),
      'stars' keeps the lighter 2D sky — a per-device escape hatch from ☰ */
   function startSky() {
-    if (S.settings.sky === 'stars' || !window.CWorld) { window.CStars.init(); if (window.__sceneUpdate) window.__sceneUpdate(); return; }
+    /* Data-saver and very slow radios get the drawn sky instead of the WebGL
+       world: same night, a fraction of the work. `sky:auto` still respects it;
+       an explicit choice from ☰ always wins. */
+    var frugal = false;
+    try {
+      var c = navigator.connection || {};
+      frugal = c.saveData === true || /(^|-)2g$/.test(String(c.effectiveType || ''));
+    } catch (e) {}
+    if (S.settings.sky === 'auto' && frugal && document.body) document.body.classList.add('frugal-sky');
+    if (S.settings.sky === 'stars' || !window.CWorld || (S.settings.sky === 'auto' && frugal)) { window.CStars.init(); if (window.__sceneUpdate) window.__sceneUpdate(); return; }
     var worldUp = false;
     try { worldUp = window.CWorld.init(document.getElementById('world')); } catch (e) { worldUp = false; }
     if (worldUp) {
@@ -1685,6 +1879,19 @@
     /* building 20k+ particles is real work on a slow phone: let the hero paint
        first, then raise the sky one frame later */
     setTimeout(startSky, 90);
+    /* a phone that satchels the app for an hour should not keep a WebGL
+       context alive; free it, and rebuild the sky when it is shown again */
+    var hiddenAt = 0;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 120000 && window.CWorld && window.CWorld.dispose && document.body.classList.contains('has-world')) {
+        try { window.CWorld.dispose(); } catch (e) {}
+        document.body.classList.remove('has-world');
+        hiddenAt = 0;
+        setTimeout(startSky, 60);
+      }
+      hiddenAt = 0;
+    });
     /* the sky rises, the book gathers, then the words arrive */
     setTimeout(function () {
       var h = $('.scene.hero');

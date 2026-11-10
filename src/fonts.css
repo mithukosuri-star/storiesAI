@@ -4,3 +4,8 @@
 @font-face{font-family:'Cormorant Garamond';src:url("__CORMORANT_ITALIC__") format('woff2');font-style:italic;font-weight:300 500;font-display:swap}
 @font-face{font-family:'Jost';src:url("__JOST__") format('woff2');font-style:normal;font-weight:300 500;font-display:swap}
 @font-face{font-family:'Nunito';src:url("__NUNITO__") format('woff2');font-style:normal;font-weight:400 500;font-display:swap}
+/* Indic scripts: the reader has Hindi and Bengali stories, and the pill that
+   names each language shows it in its own script. Only the script subsets are
+   embedded (the Latin is already covered by Fraunces). */
+@font-face{font-family:'Noto Serif Devanagari';src:url("__NOTO_DEVANAGARI__") format('woff2');font-style:normal;font-weight:400 700;font-display:swap;unicode-range:U+0900-097F,U+A830-A839,U+1CD0-1CF9}
+@font-face{font-family:'Noto Serif Bengali';src:url("__NOTO_BENGALI__") format('woff2');font-style:normal;font-weight:400 700;font-display:swap;unicode-range:U+0980-09FF,U+1CD0-1CF9}

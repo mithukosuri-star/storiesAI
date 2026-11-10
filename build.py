@@ -25,6 +25,8 @@ font_files = {
     "__CORMORANT_ITALIC__": ("cormorant-italic.woff2", "font/woff2"),
     "__JOST__": ("jost.woff2", "font/woff2"),
     "__NUNITO__": ("nunito.woff2", "font/woff2"),
+    "__NOTO_DEVANAGARI__": ("noto-devanagari.woff2", "font/woff2"),
+    "__NOTO_BENGALI__": ("noto-bengali.woff2", "font/woff2"),
 }
 for token, (name, mime) in font_files.items():
     path = os.path.join(ROOT, "assets", "fonts", name)

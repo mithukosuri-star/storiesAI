@@ -248,6 +248,14 @@ window.CAudio = (function () {
     (SFX_PLAYERS[key] || SFX_PLAYERS.twinkle)();
   }
 
+  /* Called from the first user gesture: opens (or resumes) the audio context
+     without making a sound, so the first PLAY or golden word is instant. */
+  function unlock() {
+    ensure();
+    try { if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume(); } catch (e) {}
+    return !!ctx;
+  }
+
   function setSound(on) {
     soundOn = !!on;
     if (soundOn) ensure();
@@ -305,7 +313,7 @@ window.CAudio = (function () {
   function isSpeaking() { return speaking; }
 
   return {
-    ensure: ensure, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
+    ensure: ensure, unlock: unlock, startMusic: startMusic, stopMusic: stopMusic, previewMood: previewMood,
     playSfx: playSfx, setSound: setSound, isSoundOn: function () { return soundOn; },
     setMuted: setMuted, isMuted: isMuted,
     getDiagnostics: getDiagnostics,

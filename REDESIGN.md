@@ -73,3 +73,42 @@ land on the scene their label names, mood → play → mute → stop, golden-wor
 colour selection, age panel swap, FAQ expand, free-Stars modal, and a full wizard →
 weaving → reader → library run (3 → 2 Stars, one story saved). Reduced-motion run: all
 reveals visible, no transform animations, tab order starts at the skip link.
+
+## Final refinement pass · every remaining weakness
+
+A full audit of the built page (landing + wizard + reader + library + dialogs) at
+desktop and phone widths, with the actual console, the actual audio, the actual
+storage and an automated small-text contrast sweep. What was still wrong, and what
+was changed:
+
+### Bugs found by testing, not by looking
+| Found | Cause | Fix |
+|---|---|---|
+| The reader toolbar drifted up **under** the fixed chrome while scrolling | `overflow-x:hidden` on `body` makes it a scroll container, which silently kills `position:sticky` on every descendant | `overflow-x:clip` on `html`/`body` |
+| Route changes flew through 15,000 px of the landing page | `html{scroll-behavior:smooth}` also applied to `window.scrollTo(0,0)` | explicit `behavior:'instant'` on route change |
+| The music chapter's "pin" never pinned | scene height equalled sticky height, so there was no travel | scene `min-height:168svh`, sticky `100svh`, composition compacted to fit |
+| The topbar scrim had been neutralised | `isolation:isolate` on `::before` created its own stacking context, so `z-index:-1` no longer went behind the bar | isolate on `.topbar`, scrim pinned at `top:-26px` with its own height |
+| FAQ answers clipped | hard-coded `max-height:360px` | measured `scrollHeight`, `hidden` when closed, real `aria-controls`/`role=region` |
+| Small text failed AA | `--dim` was 4.5:1, corner labels 3.6:1, footer links 4.0:1 | dim tier lifted to ~6.2:1, corner/footer/meta moved to ≥5.5:1 (swept automatically until clean) |
+| Emoji on story covers and in the sound feedback | platform-dependent glyphs broke the hairline icon language | drawn `ICONS` mappings + `✦` |
+
+### What was made to feel handcrafted
+- **Chapter transitions** — every scene now carries a soft accent bloom into the next; two enormous drifting light pools breathe behind the whole night (64 s, off for reduced motion and on phones).
+- **One button vocabulary** — outline, gold, pill, tool, circle and card all answer with the same hairline warmth, 1 px press and gold bloom; one gold focus ring everywhere.
+- **The music chapter** — genuinely pinned now: the composition holds still for 68 svh while the sky passes behind it.
+- **The wizard** — directional page-turn between steps, numbered progress with `aria-valuenow`, inline validation (shake + `role=alert`), a sticky primary bar on phones, help text in the script voice.
+- **The reader** — a bookmark rail down the left edge that fills per chapter, chapter dots that follow the eye instead of only clicks, a no-wrap toolbar, a page with a lit spine, and paragraph focus that *lifts* the current line instead of dimming the rest to 35 %.
+- **The library** — drawn glyph covers, hairline metal frame, an empty state that reads like an invitation.
+- **The menu** — three doors and a settings list instead of nine identical pills.
+- **Performance** — the particle sky pauses behind any dialog and only runs at full strength on the landing page; a hidden tab for over two minutes frees the WebGL context and rebuilds it on return. Measured: LCP 453 ms, CLS 0.001, ~800 DOM nodes.
+- **Accessibility** — skip link, focus trap + restore + Esc in dialogs, `aria-live` toast that re-announces, chapter dots with real labels, progress semantics, and a contrast sweep that now reports zero failures.
+
+### Third pass — what testing in a real browser found this time
+- **The phone reader bar was clipping "Share"** (seven tools needed 550 px in a 392 px bar). The phone now keeps the five that belong there — Copy, Print and Remove are desktop/library gestures — and the row fits exactly: `scrollWidth 392 = clientWidth 392`.
+- **Pinned music chapter was pinned at the wrong height on a phone**: the sticky stopped being useful and its last line sat under the fixed corner labels. On phones the chapter is a single flowing column with 15 vh of clearance; on desktop it still pins for 68 svh.
+- **`footer` after the finale**: the last screen ended with a band of nothing. The finale is bottom-anchored at 72 svh so the colophon arrives with it.
+- **The topbar scrim had been silently disabled** by `isolation:isolate` on its own pseudo-element — the wordmark now always has a real gradient behind it, and the reading view gets an opaque one because chapter dots were ghosting through.
+- **Hindi and Bengali were rows of tofu boxes.** A Devanagari and a Bengali serif subset are now embedded (110 KB) and used for the language pills, story titles and chapter prose (`lang="hi"`/`lang="bn"` set on the article, cover and card). Verified with a real Hindi story in the reader.
+- **Small-text contrast**: dim 4.5:1 → 6.2:1, corner labels 3.6:1 → 5.6:1, footer 4.0:1 → 6.2:1. The automated sweep now returns zero failures (the only entry is `✦`, decorative and `aria-hidden`).
+- **`saveData` / 2G** now selects the drawn sky instead of the WebGL world, with the choice still overridable from ☰.
+- **Under the wizard the world's tree line read as dark blocks behind the fields** — app views keep only 7 % of it behind a calm night column.
